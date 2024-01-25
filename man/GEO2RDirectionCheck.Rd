@@ -11,7 +11,9 @@ GEO2RDirectionCheck(
   gsm,
   Technology,
   GraphPath,
-  subsetRaw = FALSE
+  subsetRaw = FALSE,
+  writeRaw,
+  RawQCPath
 )
 }
 \arguments{

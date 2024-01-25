@@ -1,12 +1,19 @@
 Package: MultiOmics
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Environment for analysis and exploration of multi-omics data.
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Author: Brendan Gongol, Xueyuan Jiang, Xiaowen Chen, Yang Liu
+Imports: AnnotationDbi, Biobase, BiocFileCache, DEP, DESeq2, GEOquery, NormalyzerDE, R.utils, 
+         RforProteomics, SummarizedExperiment, clariomdhumantranscriptcluster.db, data.table, 
+         dplyr, ggplot2, hgu133a.db, hgu133plus2.db, hta20transcriptcluster.db, 
+         hugene10sttranscriptcluster.db, hugene11sttranscriptcluster.db, hugene20sttranscriptcluster.db, 
+         hwgcod.db, illuminaHumanv4.db, limma, org.Hs.eg.db, org.Mm.eg.db, rpx, stringr, tidyr, 
+         tidyverse, umap, plotly, shinyWidgets, textclean, RColorBrewer, readxl, makeunique,
+         radiant.data, mia
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.3
+
+
+
