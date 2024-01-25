@@ -26,7 +26,7 @@ overview <- overview[!ID == "",]
 overview$Website <- paste("<a href=", overview$Website, "target=_blank>", "GEO_website", "</a>")
 overview[grepl("href=  target=_blank", overview$Website),]$Website <- NA
 #### Raw data files ####
-raw_df = readRDS(file.path(homedir, "ProcessFiles", "fpkm_subset.v2.RDS"))
+raw_df = readRDS(file.path(homedir, "ProcessFiles", "expression_norm.v2.RDS"))
 genesAll = rowData(raw_df)$SYMBOL
 dataAll = unique(colData(raw_df)$dataset)%>%na.omit()
 diseaseAll = unique(overview$Disease)
@@ -48,25 +48,25 @@ SummaryPlot <- function(over2, features, attribute){
       for(i in 1:nrow(unique2)){
         spl <- str_split(unique2$Tissue[i], ",")[[1]]
         if(length(spl) > 1){
-        spl <- gsub(" ", "", spl)
-        t <- unique2[i,]
-        dttemp <- data.table(ID=t$ID,GPLNumber=t$GPLNumber,ComparisonVector=t$ComparisonVector,RawColumnNames=t$RawColumnNames,
-                    FCColumnNames=t$FCColumnNames,GenerateSpotfire=t$GenerateSpotfire,DownloadData=t$DownloadData,Title=t$Title,Year=t$Year,`Profiling Resource`=t$`Profiling Resource`,
-                    Tissue = spl,Species = t$Species,Disease=t$Disease,`Donor count`=t$`Donor count`,Website=t$Website,DataType=t$DataType,
-                    Technology=t$Technology,DataIncorporated=t$DataIncorporated, Description=t$Description, Resources=t$Resources )
-        unique2 <- rbind(unique2, dttemp)
-        remove <- c(remove, i) }}
+          spl <- gsub(" ", "", spl)
+          t <- unique2[i,]
+          dttemp <- data.table(ID=t$ID,GPLNumber=t$GPLNumber,ComparisonVector=t$ComparisonVector,RawColumnNames=t$RawColumnNames,
+                               FCColumnNames=t$FCColumnNames,GenerateSpotfire=t$GenerateSpotfire,DownloadData=t$DownloadData,Title=t$Title,Year=t$Year,`Profiling Resource`=t$`Profiling Resource`,
+                               Tissue = spl,Species = t$Species,Disease=t$Disease,`Donor count`=t$`Donor count`,Website=t$Website,DataType=t$DataType,
+                               Technology=t$Technology,DataIncorporated=t$DataIncorporated, Description=t$Description, Resources=t$Resources )
+          unique2 <- rbind(unique2, dttemp)
+          remove <- c(remove, i) }}
       if(!is.null(remove)){ unique2 <- unique2[!c(remove),] }
       unique2$Tissue <- gsub("Wholeblood", "Whole blood", unique2$Tissue)
       DTDiseaseBar <- unique2[,.(Count=length(ID)), by = Tissue]
       p <- ggplotly(ggplot(DTDiseaseBar, aes(x=Tissue, y=Count, fill=Tissue))+
-              geom_bar(stat = "identity", color="black") +
-              scale_fill_manual(values = c(RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Accent"), RColorBrewer::brewer.pal(12, "Paired"))) +
-              theme(legend.position = "none",
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-                    panel.background = element_blank(), axis.line = element_line(colour="black"),
-                    axis.text.x = element_text(angle = 90, hjust = 1)) +
-              ylab("Number of Studies") + xlab(colnames(DTDiseaseBar)[1]), tooltip = c("x", "y") ) }
+                      geom_bar(stat = "identity", color="black") +
+                      scale_fill_manual(values = c(RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Accent"), RColorBrewer::brewer.pal(12, "Paired"))) +
+                      theme(legend.position = "none",
+                            panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                            panel.background = element_blank(), axis.line = element_line(colour="black"),
+                            axis.text.x = element_text(angle = 90, hjust = 1)) +
+                      ylab("Number of Studies") + xlab(colnames(DTDiseaseBar)[1]), tooltip = c("x", "y") ) }
     if(attribute == "Disease"){
       DTDiseaseBar <- unique[,.(Count=length(ID)), by = Disease]
       p <- ggplotly(
@@ -82,7 +82,7 @@ SummaryPlot <- function(over2, features, attribute){
       unique2 <- unique
       remove <- NULL
       for(i in 1:nrow(unique2)){
-      spl <- str_split(unique2$Species[i], ",")[[1]]
+        spl <- str_split(unique2$Species[i], ",")[[1]]
         if(length(spl) > 1){
           spl <- gsub(" ", "", spl)
           t <- unique[i,]
@@ -90,18 +90,18 @@ SummaryPlot <- function(over2, features, attribute){
                                FCColumnNames=t$FCColumnNames,GenerateSpotfire=t$GenerateSpotfire,DownloadData=t$DownloadData,Title=t$Title,Year=t$Year,`Profiling Resource`=t$`Profiling Resource`,
                                Tissue = t$Tissue,Species = spl,Disease=t$Disease,`Donor count`=t$`Donor count`,Website=t$Website,DataType=t$DataType,
                                Technology=t$Technology,DataIncorporated=t$DataIncorporated, Description=t$Description, Resources=t$Resources)
-      unique2 <- rbind(unique2, dttemp)
-      remove <- c(remove, i) } }
+          unique2 <- rbind(unique2, dttemp)
+          remove <- c(remove, i) } }
       if(!is.null(remove)){ unique2 <- unique2[!c(remove),] }
       DTDiseaseBar <- unique2[,.(Count=length(ID)), by = Species]
       p <- ggplotly( ggplot(DTDiseaseBar, aes(x=Species, y=Count, fill=Species))+
-          geom_bar(stat = "identity", color="black") +
-          scale_fill_manual(values = c(RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Accent"), RColorBrewer::brewer.pal(12, "Paired"))) +
-          theme(legend.position = "none",
-                panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-                panel.background = element_blank(), axis.line = element_line(colour="black"),
-                axis.text.x = element_text(angle = 90, hjust = 1)) +
-          ylab("Number of Studies") + xlab(colnames(DTDiseaseBar)[1]) , tooltip = c("x", "y") ) }
+                       geom_bar(stat = "identity", color="black") +
+                       scale_fill_manual(values = c(RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Accent"), RColorBrewer::brewer.pal(12, "Paired"))) +
+                       theme(legend.position = "none",
+                             panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                             panel.background = element_blank(), axis.line = element_line(colour="black"),
+                             axis.text.x = element_text(angle = 90, hjust = 1)) +
+                       ylab("Number of Studies") + xlab(colnames(DTDiseaseBar)[1]) , tooltip = c("x", "y") ) }
     if(attribute == "Technology"){
       DTDiseaseBar <- unique[,.(Count=length(ID)), by = Technology]
       p <- ggplotly(
@@ -130,8 +130,8 @@ SummaryPlot <- function(over2, features, attribute){
 #### DE table display function ####
 ###################################
 DETableDisplay <- function(DESE, Dataset, Comparison, return = "NA"){
-    if(!Dataset == "Select Dataset"){
-      Fname <- paste(Dataset, Comparison, sep = "_")
+  if(!Dataset == "Select Dataset"){
+    Fname <- paste(Dataset, Comparison, sep = "_")
     assaySelect <- assays(DESE)[grepl(Fname, gsub("-", "_", names(assays(DESE))))]
     tempDT <- assaySelect[[1]]
     tempDT$SYMBOL <- toupper(row.names(tempDT))
@@ -146,67 +146,67 @@ DETableDisplay <- function(DESE, Dataset, Comparison, return = "NA"){
 ###############################
 VolcanoPlotR <- function(DESE,Dataset,Comparison,sigColSelect,FCcut,Pcut,filterBy,Gene){
   if(FCcut >= 1){
-  FCcut <- log2(FCcut)
-  if(!Dataset == "Select Dataset"){
-  Fname <- paste(Dataset, Comparison, sep = "_")
-  assaySelect <- assays(DESE)[grepl(Fname, gsub("-", "_", names(assays(DESE))))]
-  tempDT <- assaySelect[[1]]
-  tempDT$SYMBOL <- toupper(row.names(tempDT))
-  tempDT <- as.data.table(tempDT)
-  tempDT <- tempDT[complete.cases(tempDT),]
-  tempDT[,Selected:= "Not selected"]
-  tempDT[,Selected:=ifelse( ( abs(tempDT[["logFC"]]) > FCcut & tempDT[[sigColSelect]] < Pcut ), "Selected", "Not selected")]
-  if(sigColSelect == "Pvalue"){
-    if(filterBy == "Significance"){
-      p <- ggplot(tempDT, aes(x=logFC,y=-log10(Pvalue), color = Selected, text = SYMBOL)) +
-        xlab("log2(FC)")+ ylab(paste("-log10(", sigColSelect, ")", sep = "")) +
-        ggtitle(names(assaySelect)) +
-        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-              panel.background = element_blank(), axis.line = element_line(colour="black")) +
-        geom_point(data=subset(tempDT, Selected == "Not selected"),
-                   aes(x=logFC,y=-log10(Pvalue) ),
-                   shape=21, size=2, colour="gray", fill = "gray") +
-        geom_point(data=subset(tempDT, Selected == "Selected"),
-                   aes(x=logFC,y=-log10(Pvalue) ),
-                   shape=21, size=3, colour="black", fill = "#E31A1C")
-    } else {
-      p <- ggplot(tempDT, aes(x=logFC,y=-log10(Pvalue), color = Selected, text = SYMBOL)) +
-        xlab("log2(FC)")+ ylab(paste("-log10(", sigColSelect, ")", sep = "")) +
-        ggtitle(names(assaySelect)) +
-        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-              panel.background = element_blank(), axis.line = element_line(colour="black")) +
-        geom_point(data=subset(tempDT, !SYMBOL == toupper(Gene)),
-                   aes(x=logFC,y=-log10(Pvalue) ),
-                   shape=21, size=2, colour="gray", fill = "gray") +
-        geom_point(data=subset(tempDT, SYMBOL == toupper(Gene)),
-                   aes(x=logFC,y=-log10(Pvalue) ),
-                   shape=21, size=3, colour="black", fill = "#E31A1C") }
-  } else if(sigColSelect == "AdjPValue"){
-    if(filterBy == "Significance"){
-      p <- ggplot(tempDT, aes(x=logFC,y=-log10(AdjPValue), color = Selected, text = SYMBOL)) +
-        xlab("log2(FC)")+ ylab(paste("-log10(", sigColSelect, ")", sep = "")) +
-        ggtitle(names(assaySelect)) +
-        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-              panel.background = element_blank(), axis.line = element_line(colour="black")) +
-        geom_point(data=subset(tempDT, Selected == "Not selected"),
-                   aes(x=logFC,y=-log10(AdjPValue) ),
-                   shape=21, size=2, colour="gray", fill = "gray") +
-        geom_point(data=subset(tempDT, Selected == "Selected"),
-                   aes(x=logFC,y=-log10(AdjPValue) ),
-                   shape=21, size=3, colour="black", fill = "#E31A1C")
-    } else {
-      p <- ggplot(tempDT, aes(x=logFC,y=-log10(AdjPValue), color = Selected, text = SYMBOL)) +
-        xlab("log2(FC)")+ ylab(paste("-log10(", sigColSelect, ")", sep = "")) +
-        ggtitle(names(assaySelect)) +
-        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-              panel.background = element_blank(), axis.line = element_line(colour="black")) +
-        geom_point(data=subset(tempDT, !SYMBOL == toupper(Gene)),
-                   aes(x=logFC,y=-log10(Pvalue) ),
-                   shape=21, size=2, colour="gray", fill = "gray") +
-        geom_point(data=subset(tempDT, SYMBOL == toupper(Gene)),
-                   aes(x=logFC,y=-log10(Pvalue) ),
-                   shape=21, size=3, colour="black", fill = "#E31A1C") }}
-    return(p) } } }
+    FCcut <- log2(FCcut)
+    if(!Dataset == "Select Dataset"){
+      Fname <- paste(Dataset, Comparison, sep = "_")
+      assaySelect <- assays(DESE)[grepl(Fname, gsub("-", "_", names(assays(DESE))))]
+      tempDT <- assaySelect[[1]]
+      tempDT$SYMBOL <- toupper(row.names(tempDT))
+      tempDT <- as.data.table(tempDT)
+      tempDT <- tempDT[complete.cases(tempDT),]
+      tempDT[,Selected:= "Not selected"]
+      tempDT[,Selected:=ifelse( ( abs(tempDT[["logFC"]]) > FCcut & tempDT[[sigColSelect]] < Pcut ), "Selected", "Not selected")]
+      if(sigColSelect == "Pvalue"){
+        if(filterBy == "Significance"){
+          p <- ggplot(tempDT, aes(x=logFC,y=-log10(Pvalue), color = Selected, text = SYMBOL)) +
+            xlab("log2(FC)")+ ylab(paste("-log10(", sigColSelect, ")", sep = "")) +
+            ggtitle(names(assaySelect)) +
+            theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                  panel.background = element_blank(), axis.line = element_line(colour="black")) +
+            geom_point(data=subset(tempDT, Selected == "Not selected"),
+                       aes(x=logFC,y=-log10(Pvalue) ),
+                       shape=21, size=2, colour="gray", fill = "gray") +
+            geom_point(data=subset(tempDT, Selected == "Selected"),
+                       aes(x=logFC,y=-log10(Pvalue) ),
+                       shape=21, size=3, colour="black", fill = "#E31A1C")
+        } else {
+          p <- ggplot(tempDT, aes(x=logFC,y=-log10(Pvalue), color = Selected, text = SYMBOL)) +
+            xlab("log2(FC)")+ ylab(paste("-log10(", sigColSelect, ")", sep = "")) +
+            ggtitle(names(assaySelect)) +
+            theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                  panel.background = element_blank(), axis.line = element_line(colour="black")) +
+            geom_point(data=subset(tempDT, !SYMBOL == toupper(Gene)),
+                       aes(x=logFC,y=-log10(Pvalue) ),
+                       shape=21, size=2, colour="gray", fill = "gray") +
+            geom_point(data=subset(tempDT, SYMBOL == toupper(Gene)),
+                       aes(x=logFC,y=-log10(Pvalue) ),
+                       shape=21, size=3, colour="black", fill = "#E31A1C") }
+      } else if(sigColSelect == "AdjPValue"){
+        if(filterBy == "Significance"){
+          p <- ggplot(tempDT, aes(x=logFC,y=-log10(AdjPValue), color = Selected, text = SYMBOL)) +
+            xlab("log2(FC)")+ ylab(paste("-log10(", sigColSelect, ")", sep = "")) +
+            ggtitle(names(assaySelect)) +
+            theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                  panel.background = element_blank(), axis.line = element_line(colour="black")) +
+            geom_point(data=subset(tempDT, Selected == "Not selected"),
+                       aes(x=logFC,y=-log10(AdjPValue) ),
+                       shape=21, size=2, colour="gray", fill = "gray") +
+            geom_point(data=subset(tempDT, Selected == "Selected"),
+                       aes(x=logFC,y=-log10(AdjPValue) ),
+                       shape=21, size=3, colour="black", fill = "#E31A1C")
+        } else {
+          p <- ggplot(tempDT, aes(x=logFC,y=-log10(AdjPValue), color = Selected, text = SYMBOL)) +
+            xlab("log2(FC)")+ ylab(paste("-log10(", sigColSelect, ")", sep = "")) +
+            ggtitle(names(assaySelect)) +
+            theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                  panel.background = element_blank(), axis.line = element_line(colour="black")) +
+            geom_point(data=subset(tempDT, !SYMBOL == toupper(Gene)),
+                       aes(x=logFC,y=-log10(Pvalue) ),
+                       shape=21, size=2, colour="gray", fill = "gray") +
+            geom_point(data=subset(tempDT, SYMBOL == toupper(Gene)),
+                       aes(x=logFC,y=-log10(Pvalue) ),
+                       shape=21, size=3, colour="black", fill = "#E31A1C") }}
+      return(p) } } }
 
 ############################
 #### DEG count function ####
@@ -214,232 +214,244 @@ VolcanoPlotR <- function(DESE,Dataset,Comparison,sigColSelect,FCcut,Pcut,filterB
 DEGcount <- function(DESE = DESE, Dataset,Comparison,sigColSelect = "Pvalue",filterBy,Gene,FCcut,Pcut){
   if(FCcut >= 1){
     FCcut <- log2(FCcut)
-  if(!Dataset == "Select Dataset"){
-  Fname <- paste(Dataset, Comparison, sep = "_")
-  assaySelect <- assays(DESE)[grepl(Fname, gsub("-", "_", names(assays(DESE)))   )  ]
-  tempDT <- assaySelect[[1]]
-  tempDT$SYMBOL <- row.names(tempDT)
-  tempDT <- as.data.table(tempDT)
-  tempDT <- tempDT[complete.cases(tempDT),]
-  #### update colors ####
-  tempDT[,Selected:= "Not selected"]
-  tempDT[,Selected:=ifelse( ( abs(tempDT[["logFC"]]) > FCcut & tempDT[[sigColSelect]] < Pcut ), "Selected", "Not selected")]
-  if(filterBy == "Significance"){
-    statement <- as.data.frame(list(c(
-      paste("Total genes:", nrow(tempDT)),
-      paste("Total Selected:", nrow(tempDT[Selected == "Selected",])),
-      paste("Total Not Selected", nrow(tempDT[Selected == "Not selected",])),
-      paste("Total Up-regulated Selected:", nrow(tempDT[Selected == "Selected" & logFC > 0,])),
-      paste("Total Down-regulated Selected:", nrow(tempDT[Selected == "Selected" & logFC < 0,])))  ))
-    colnames(statement) <- " "
-  } else {
-    statement <- as.data.frame(paste("Selected gene is Highlighted"))
-    colnames(statement) <- " " }
-  return(statement) } } }
+    if(!Dataset == "Select Dataset"){
+      Fname <- paste(Dataset, Comparison, sep = "_")
+      assaySelect <- assays(DESE)[grepl(Fname, gsub("-", "_", names(assays(DESE)))   )  ]
+      tempDT <- assaySelect[[1]]
+      tempDT$SYMBOL <- row.names(tempDT)
+      tempDT <- as.data.table(tempDT)
+      tempDT <- tempDT[complete.cases(tempDT),]
+      #### update colors ####
+      tempDT[,Selected:= "Not selected"]
+      tempDT[,Selected:=ifelse( ( abs(tempDT[["logFC"]]) > FCcut & tempDT[[sigColSelect]] < Pcut ), "Selected", "Not selected")]
+      if(filterBy == "Significance"){
+        statement <- as.data.frame(list(c(
+          paste("Total genes:", nrow(tempDT)),
+          paste("Total Selected:", nrow(tempDT[Selected == "Selected",])),
+          paste("Total Not Selected", nrow(tempDT[Selected == "Not selected",])),
+          paste("Total Up-regulated Selected:", nrow(tempDT[Selected == "Selected" & logFC > 0,])),
+          paste("Total Down-regulated Selected:", nrow(tempDT[Selected == "Selected" & logFC < 0,])))  ))
+        colnames(statement) <- " "
+      } else {
+        statement <- as.data.frame(paste("Selected gene is Highlighted"))
+        colnames(statement) <- " " }
+      return(statement) } } }
 
 ######################################
 #### Multi-Study Heatmap function ####
 ######################################
 CrossDataHeat <- function(DESE, GeneSelection, Dataselection, ScaleData, plottype = "Heat", FCCutoff, PCutoff, SigCol){
   if(FCCutoff >= 1){
-  FCCutoff <- log2(FCCutoff)
-  if(!is.null(Dataselection)){
-    #### Select Genes ####
-    SEsub <- DESE[rowData(DESE)$SYMBOL %in% GeneSelection]
-    #### select assays ####
-    assaySelect <- assays(SEsub)[names(assays(SEsub)) %in% Dataselection]
-    #### loop through remaining assays and combine results ####
-    for(i in 1:length(assaySelect)){ dat <- assaySelect[[i]]
-    colnames(dat) <- paste(colnames(dat), names(assaySelect)[i], sep = "_")
-    if(i == 1){ compiledDF <-dat
-    } else { compiledDF <- merge(compiledDF, dat, by = "row.names")
-    row.names(compiledDF) <- compiledDF$Row.names
-    compiledDF$Row.names <- NULL  } }
-    #### create heatmap ####
-    ########################
-    if(plottype == "Heat"){
-      selcomps <- unique(mgsub(colnames(compiledDF), c("logFC_", "AdjPValue_", "Pvalue_"), c("","","")))
-      DFsub3 <- data.table()
-      for(b in 1:length(selcomps)){
-        temp <- compiledDF[,grepl(selcomps[b], colnames(compiledDF))]
-        temp <- temp[,grepl(paste("logFC", SigCol, sep = "|"), colnames(temp))]
-        colnames(temp) <- c("logFC", "Significance")
-        temp$SYMBOL <- rownames(temp)
-        temp$Comparison <- selcomps[b]
-        DFsub3 <- rbind(DFsub3, temp)
-      }
-      d1 <- DFsub3[abs(logFC) > FCCutoff & Significance < PCutoff,]
-      d2 <- DFsub3[!(paste(DFsub3$SYMBOL, DFsub3$Comparison, sep = "") %in% paste(d1$SYMBOL, d1$Comparison, sep = "")),][, `:=` (logFC = NA, Significance = NA)][]
-      d3 <- rbind(d1, d2)
-      d3 <- d3[,c("logFC", "SYMBOL", "Comparison"), with = FALSE]
-      DFsub <- reshape2::dcast(d3, SYMBOL~Comparison, value.var = "logFC")
-      rownames(DFsub) <- DFsub$SYMBOL
-      DFsub$SYMBOL <- NULL
-      DFsub2 <- DFsub
-      #### scale data ####
-      if(ScaleData){
-        transMat <- t(DFsub2)
-        rowScaled <- apply(as.matrix(transMat), 2, scale)
-        rownames(rowScaled) <- rownames(transMat)
-        DFsub2 <- as.data.frame(t(rowScaled))
-      }
-      DFsub2$names <- row.names(DFsub)
-      mel <- as.data.table(reshape2::melt(DFsub2))
-      if(ScaleData){
-        setnames(mel, c("names", "variable", "value"), c("Gene", "Dataset", "Scaled log2(Fold Change)"))
-        p <- ggplot(mel, aes(x = Dataset, y=Gene, fill = `Scaled log2(Fold Change)`)) +
-          geom_tile(color = "white", lwd = 0.75, linetype = 1) +
-          scale_fill_gradient2(low = "#075AFF",
-                               high= "#FF0000") +
-          coord_fixed() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
-      } else {
-        setnames(mel, c("names", "variable", "value"), c("Gene", "Dataset", "log2(Fold Change)"))
-        p <- ggplot(mel, aes(x = Dataset, y=Gene, fill = `log2(Fold Change)`)) +
-          geom_tile(color = "white", lwd = 0.75, linetype = 1) +
-          scale_fill_gradient2(low = "#075AFF",
-                               # mid = "#FFFFCC",
-                               high= "#FF0000") +
-          coord_fixed() +
-          theme(axis.text.x = element_text(angle = 90, hjust = 1))
-      }
-      return(p) }
-    #### Obtain counts of selected genes and return a barplot ####
-    if(plottype == "Bar"){
-      selcomps <- unique(mgsub(colnames(compiledDF), c("logFC_", "AdjPValue_", "Pvalue_"), c("","","")))
-      DFsub3 <- data.table()
-      for(b in 1:length(selcomps)){
-        temp <- compiledDF[,grepl(selcomps[b], colnames(compiledDF))]
-        temp <- temp[,grepl(paste("logFC", SigCol, sep = "|"), colnames(temp))]
-        colnames(temp) <- c("logFC", "Significance")
-        temp$SYMBOL <- rownames(temp)
-        temp$Comparison <- selcomps[b]
-        DFsub3 <- rbind(DFsub3, temp)
-      }
-      great <- DFsub3[logFC > FCCutoff & Significance < PCutoff,]
-      FCGreat <- great[, .(AveFC = mean(logFC, na.rm = TRUE)), by = "SYMBOL"]
-      setnames(FCGreat, c("SYMBOL"), c("GeneName"))
-      if(nrow(great) > 0){
-        great <- data.table(table(great$SYMBOL)) %>% setnames(c("V1", "N"), c("GeneName", "Nup"))
-        great <- merge(great, FCGreat, by = "GeneName")
-        GreatCountAll <- great
-        great <- great[order(great$Nup, decreasing = TRUE),]#[1:25,]
-      }
-      less <- DFsub3[logFC < -FCCutoff & Significance < PCutoff,]
-      FCless <- less[, .(AveFC = mean(logFC, na.rm = TRUE)), by = "SYMBOL"]
-      setnames(FCless, c("SYMBOL"), c("GeneName"))
-      if(nrow(less) > 0){
-        less <- data.table(table(less$SYMBOL)) %>% setnames(c("V1", "N"), c("GeneName", "Ndown"))
-        less <- merge(less, FCless, by = "GeneName")
-        lessCountAll <- less
-        less <- less[order(less$Ndown, decreasing = TRUE),]#[1:25,]
-      }
-      if((nrow(great) > 0 & nrow(less) > 0)){
-        final <- merge(great, less, by = "GeneName", all = TRUE)
-        #### Merge Fold Change ####
-        final$AveFC <- 0
-        for(b in 1:nrow(final)){
-          t <- c(final[b,]$AveFC.x, final[b,]$AveFC.y)
-          t <- t[!is.na(t)]
-          if(length(t) > 1){
-            F2 <- data.table()
-            for(c in 1:length(t)){
-              F2 <- rbind(F2, final[b,])
-            }
-            F2$AveFC <- t
-            final <- rbind(final, F2)
-          } else{ final$AveFC[b] <- t[!is.na(t)]
-          } }
-        final$AveFC.x <- NULL; final$AveFC.y <- NULL
-        final <- final[!AveFC == 0,]
-        final <- unique(final)
-        #### Merge counts ####
-        final$direction <- "NA"
-        final$counts <- 0
-        for(b in 1:nrow(final)){
-          up <- final$Nup[b]
-          down <- final$Ndown[b]
-          fc <- final$AveFC[b]
-          if(fc > 0){
-            final$direction[b] <- "up"
-            final$counts[b] <- up
-          } else {
-            final$direction[b] <- "down"
-            final$counts[b] <- down
-          } }
-        final$Nup <- NULL; final$Ndown <- NULL
-        final <- rbind(final[direction == "up",][order(-counts, -AveFC),],
-                       final[direction == "down",][order(counts, -AveFC),])
-      }
-      if(nrow(great) > 0 & nrow(less) == 0){
-        final <- great
-        final$direction <- "up"
-        setnames(final, c("Nup"), c("counts"))
-        final <- final[order(-counts, AveFC),]
-      }
-      if(nrow(great) == 0 & nrow(less) > 0){
-        final <- less
-        final$direction <- "down"
-        setnames(final, c("Ndown"), c("counts"))
-        final <- final[order(-counts, AveFC),]
-      }
-      if(!is.null(final)){
-        final$GeneName <- factor(final$GeneName, levels = unique(final$GeneName ))
-        p <- ggplot(final, aes(GeneName, AveFC, fill = direction)) +
-          geom_bar(position = "dodge", stat = "identity") +
-          geom_text(aes(label=counts), vjust=-0.5) +
-          theme(axis.text.y = element_text(angle = 0, hjust = 1),
-                axis.text.x = element_text(angle = 90, hjust = 1),
-                panel.grid.major = element_blank(),
-                panel.grid.minor = element_blank(),
-                panel.background = element_blank(),
-                axis.line = element_line(colour="black") ) +
-          ylab("Average log2(Fold change)")+
-          xlab("Gene Name")+
-          ggtitle(paste("average fold change across comparisons")) +
-          scale_fill_manual(values = RColorBrewer::brewer.pal(11, "RdYlBu")[c(10,2)])
-      }
-      return(p) }
-    if(plottype == "Table"){
-      selcomps <- unique(mgsub(colnames(compiledDF), c("logFC_", "AdjPValue_", "Pvalue_"), c("","","")))
-      DFsub3 <- data.table()
-      for(b in 1:length(selcomps)){
-        temp <- compiledDF[,grepl(selcomps[b], colnames(compiledDF))]
-        temp <- temp[,grepl(paste("logFC", SigCol, sep = "|"), colnames(temp))]
-        colnames(temp) <- c("logFC", "Significance")
-        temp$SYMBOL <- rownames(temp)
-        temp$Comparison <- selcomps[b]
-        DFsub3 <- rbind(DFsub3, temp)
-      }
-      d1 <- DFsub3[abs(logFC) > FCCutoff & Significance < PCutoff,]
-      CompDF <- d1[!is.na(d1$logFC),]
-      CompDF <- CompDF[order(SYMBOL),]
-      return(as.data.frame(CompDF))
-    } } } }
+    FCCutoff <- log2(FCCutoff)
+    if(!is.null(Dataselection)){
+      #### Select Genes ####
+      SEsub <- DESE[rowData(DESE)$SYMBOL %in% GeneSelection]
+      #### select assays ####
+      assaySelect <- assays(SEsub)[names(assays(SEsub)) %in% Dataselection]
+      #### loop through remaining assays and combine results ####
+      for(i in 1:length(assaySelect)){ dat <- assaySelect[[i]]
+      colnames(dat) <- paste(colnames(dat), names(assaySelect)[i], sep = "_")
+      if(i == 1){ compiledDF <-dat
+      } else { compiledDF <- merge(compiledDF, dat, by = "row.names")
+      row.names(compiledDF) <- compiledDF$Row.names
+      compiledDF$Row.names <- NULL  } }
+      #### create heatmap ####
+      ########################
+      if(plottype == "Heat"){
+        selcomps <- unique(mgsub(colnames(compiledDF), c("logFC_", "AdjPValue_", "Pvalue_"), c("","","")))
+        DFsub3 <- data.table()
+        for(b in 1:length(selcomps)){
+          temp <- compiledDF[,grepl(selcomps[b], colnames(compiledDF))]
+          temp <- temp[,grepl(paste("logFC", SigCol, sep = "|"), colnames(temp))]
+          colnames(temp) <- c("logFC", "Significance")
+          temp$SYMBOL <- rownames(temp)
+          temp$Comparison <- selcomps[b]
+          DFsub3 <- rbind(DFsub3, temp)
+        }
+        d1 <- DFsub3[abs(logFC) > FCCutoff & Significance < PCutoff,]
+        d2 <- DFsub3[!(paste(DFsub3$SYMBOL, DFsub3$Comparison, sep = "") %in% paste(d1$SYMBOL, d1$Comparison, sep = "")),][, `:=` (logFC = NA, Significance = NA)][]
+        d3 <- rbind(d1, d2)
+        d3 <- d3[,c("logFC", "SYMBOL", "Comparison"), with = FALSE]
+        DFsub <- reshape2::dcast(d3, SYMBOL~Comparison, value.var = "logFC")
+        rownames(DFsub) <- DFsub$SYMBOL
+        DFsub$SYMBOL <- NULL
+        DFsub2 <- DFsub
+        #### scale data ####
+        if(ScaleData){
+          transMat <- t(DFsub2)
+          rowScaled <- apply(as.matrix(transMat), 2, scale)
+          rownames(rowScaled) <- rownames(transMat)
+          DFsub2 <- as.data.frame(t(rowScaled))
+        }
+        DFsub2$names <- row.names(DFsub)
+        mel <- as.data.table(reshape2::melt(DFsub2))
+        if(ScaleData){
+          setnames(mel, c("names", "variable", "value"), c("Gene", "Dataset", "Scaled log2(Fold Change)"))
+          p <- ggplot(mel, aes(x = Dataset, y=Gene, fill = `Scaled log2(Fold Change)`)) +
+            geom_tile(color = "white", lwd = 0.75, linetype = 1) +
+            scale_fill_gradient2(low = "#075AFF",
+                                 high= "#FF0000") +
+            coord_fixed() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+        } else {
+          setnames(mel, c("names", "variable", "value"), c("Gene", "Dataset", "log2(Fold Change)"))
+          p <- ggplot(mel, aes(x = Dataset, y=Gene, fill = `log2(Fold Change)`)) +
+            geom_tile(color = "white", lwd = 0.75, linetype = 1) +
+            scale_fill_gradient2(low = "#075AFF",
+                                 # mid = "#FFFFCC",
+                                 high= "#FF0000") +
+            coord_fixed() +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1))
+        }
+        return(p) }
+      #### Obtain counts of selected genes and return a barplot ####
+      if(plottype == "Bar"){
+        selcomps <- unique(mgsub(colnames(compiledDF), c("logFC_", "AdjPValue_", "Pvalue_"), c("","","")))
+        DFsub3 <- data.table()
+        for(b in 1:length(selcomps)){
+          temp <- compiledDF[,grepl(selcomps[b], colnames(compiledDF))]
+          temp <- temp[,grepl(paste("logFC", SigCol, sep = "|"), colnames(temp))]
+          colnames(temp) <- c("logFC", "Significance")
+          temp$SYMBOL <- rownames(temp)
+          temp$Comparison <- selcomps[b]
+          DFsub3 <- rbind(DFsub3, temp)
+        }
+        great <- DFsub3[logFC > FCCutoff & Significance < PCutoff,]
+        FCGreat <- great[, .(AveFC = mean(logFC, na.rm = TRUE)), by = "SYMBOL"]
+        setnames(FCGreat, c("SYMBOL"), c("GeneName"))
+        if(nrow(great) > 0){
+          great <- data.table(table(great$SYMBOL)) %>% setnames(c("V1", "N"), c("GeneName", "Nup"))
+          great <- merge(great, FCGreat, by = "GeneName")
+          GreatCountAll <- great
+          great <- great[order(great$Nup, decreasing = TRUE),]#[1:25,]
+        }
+        less <- DFsub3[logFC < -FCCutoff & Significance < PCutoff,]
+        FCless <- less[, .(AveFC = mean(logFC, na.rm = TRUE)), by = "SYMBOL"]
+        setnames(FCless, c("SYMBOL"), c("GeneName"))
+        if(nrow(less) > 0){
+          less <- data.table(table(less$SYMBOL)) %>% setnames(c("V1", "N"), c("GeneName", "Ndown"))
+          less <- merge(less, FCless, by = "GeneName")
+          lessCountAll <- less
+          less <- less[order(less$Ndown, decreasing = TRUE),]#[1:25,]
+        }
+        if((nrow(great) > 0 & nrow(less) > 0)){
+          final <- merge(great, less, by = "GeneName", all = TRUE)
+          #### Merge Fold Change ####
+          final$AveFC <- 0
+          for(b in 1:nrow(final)){
+            t <- c(final[b,]$AveFC.x, final[b,]$AveFC.y)
+            t <- t[!is.na(t)]
+            if(length(t) > 1){
+              F2 <- data.table()
+              for(c in 1:length(t)){
+                F2 <- rbind(F2, final[b,])
+              }
+              F2$AveFC <- t
+              final <- rbind(final, F2)
+            } else{ final$AveFC[b] <- t[!is.na(t)]
+            } }
+          final$AveFC.x <- NULL; final$AveFC.y <- NULL
+          final <- final[!AveFC == 0,]
+          final <- unique(final)
+          #### Merge counts ####
+          final$direction <- "NA"
+          final$counts <- 0
+          for(b in 1:nrow(final)){
+            up <- final$Nup[b]
+            down <- final$Ndown[b]
+            fc <- final$AveFC[b]
+            if(fc > 0){
+              final$direction[b] <- "up"
+              final$counts[b] <- up
+            } else {
+              final$direction[b] <- "down"
+              final$counts[b] <- down
+            } }
+          final$Nup <- NULL; final$Ndown <- NULL
+          final <- rbind(final[direction == "up",][order(-counts, -AveFC),],
+                         final[direction == "down",][order(counts, -AveFC),])
+        }
+        if(nrow(great) > 0 & nrow(less) == 0){
+          final <- great
+          final$direction <- "up"
+          setnames(final, c("Nup"), c("counts"))
+          final <- final[order(-counts, AveFC),]
+        }
+        if(nrow(great) == 0 & nrow(less) > 0){
+          final <- less
+          final$direction <- "down"
+          setnames(final, c("Ndown"), c("counts"))
+          final <- final[order(-counts, AveFC),]
+        }
+        if(!is.null(final)){
+          final$GeneName <- factor(final$GeneName, levels = unique(final$GeneName ))
+          p <- ggplot(final, aes(GeneName, AveFC, fill = direction)) +
+            geom_bar(position = "dodge", stat = "identity") +
+            geom_text(aes(label=counts), vjust=-0.5) +
+            theme(axis.text.y = element_text(angle = 0, hjust = 1),
+                  axis.text.x = element_text(angle = 90, hjust = 1),
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.background = element_blank(),
+                  axis.line = element_line(colour="black") ) +
+            ylab("Average log2(Fold change)")+
+            xlab("Gene Name")+
+            ggtitle(paste("average fold change across comparisons")) +
+            scale_fill_manual(values = RColorBrewer::brewer.pal(11, "RdYlBu")[c(10,2)])
+        }
+        return(p) }
+      if(plottype == "Table"){
+        selcomps <- unique(mgsub(colnames(compiledDF), c("logFC_", "AdjPValue_", "Pvalue_"), c("","","")))
+        DFsub3 <- data.table()
+        for(b in 1:length(selcomps)){
+          temp <- compiledDF[,grepl(selcomps[b], colnames(compiledDF))]
+          temp <- temp[,grepl(paste("logFC", SigCol, sep = "|"), colnames(temp))]
+          colnames(temp) <- c("logFC", "Significance")
+          temp$SYMBOL <- rownames(temp)
+          temp$Comparison <- selcomps[b]
+          DFsub3 <- rbind(DFsub3, temp)
+        }
+        d1 <- DFsub3[abs(logFC) > FCCutoff & Significance < PCutoff,]
+        CompDF <- d1[!is.na(d1$logFC),]
+        CompDF <- CompDF[order(SYMBOL),]
+        return(as.data.frame(CompDF))
+      } } } }
 
 #############################
 #### Violin plot of FPKM ####
 #############################
+check_na = function(raw_df, select_gene, select_data){
+  samples_gse = paste(select_data, collapse = "|")
+  print(samples_gse)
+  df_subset = raw_df[rowData(raw_df)$SYMBOL%in%select_gene, grepl(samples_gse, colnames(raw_df))]
+  print(df_subset)
+  return(any(is.na(df_subset%>%assay())))
+}
+
 box_violin_plot_v2.single = function(input_df, select_gene, select_proj, log10){
   # remove the NA ones, if no NA, ignore this step
   project_meta = colData(input_df)[,c("disease", "organism", "platform", "dataset", "rawcolumnnames", "cell_type", "tissue_type", "cell_line", "Condition")]
   project_meta = project_meta[!is.na(project_meta$dataset),]
   raw_df_select_sample = project_meta%>%as.data.frame()%>%dplyr::filter(dataset%in%select_proj)%>%dplyr::select(rawcolumnnames)%>%unlist()%>%as.vector()
   # subset the data
-  raw_df_summarized = input_df[rowData(input_df)$SYMBOL%in%select_gene,raw_df_select_sample]
-  raw_df_melt = meltAssay(raw_df_summarized, assay_name="FPKM", add_row_data = "SYMBOL", add_col_data = c("dataset", "rawcolumnnames", "Condition"))%>%as.data.frame() # assay.type = "FPKM",
+  raw_df_summarized = input_df[rowData(input_df)$SYMBOL%in%select_gene, raw_df_select_sample]
+  raw_df_melt = meltAssay(raw_df_summarized, assay_name="Expression", add_row_data = "SYMBOL", add_col_data = c("dataset", "rawcolumnnames", "Condition"))%>%as.data.frame() # assay.type = "FPKM",
   # replace NAs with 0
-  raw_df_melt[is.na(raw_df_melt)] <- 0.01
+  #raw_df_melt[is.na(raw_df_melt)] <- 0.01
+  #print(head(raw_df_melt))
+  raw_df_melt = na.omit(raw_df_melt)
+
+  #print(head(raw_df_melt))
   # color palette
   box_count = length(unique(raw_df_melt$Condition))
   coul = brewer.pal(9, "Set3")
   coul = colorRampPalette(coul)(box_count)
   # log transformation
   if(log10){
-    raw_df_melt$FPKM = log10(raw_df_melt$FPKM)
-    ylab_t = expression(~log[10]~(FPKM))
-  } else{ ylab_t = "FPKM" }
-  p=ggplot(data = raw_df_melt, aes(x=Condition, y=FPKM, fill=Condition))+
-    geom_violin(scale = "width", trim = FALSE, alpha = 0.7)+
+    raw_df_melt$Expression = log10(raw_df_melt$Expression+1)
+    ylab_t = expression(~log[10]~(NormalizedExpression))
+  } else{ ylab_t = "NormalizedExpression" }
+  p=ggplot(data = raw_df_melt, aes(x=Condition, y=Expression, fill=Condition))+
+    geom_violin(scale = "width", trim = T, alpha = 0.7)+
     geom_boxplot(outlier.shape = NA,coef = 0, fill="gray", width=0.3)+
     coord_flip()+
     ylab(ylab_t)+
@@ -453,10 +465,12 @@ box_violin_plot_v2.single = function(input_df, select_gene, select_proj, log10){
           strip.text.y = element_text(angle = 0, size = 10))+
     stat_boxplot(geom='errorbar', linetype=1, width=0.2, position = "dodge2")+
     scale_fill_manual(values= coul) +
-    facet_grid(SYMBOL~., scales = "free", space = "free")
+    facet_grid(SYMBOL~., scales = "free", space = "free", drop = F)+
+    scale_x_discrete(drop = FALSE)
   print(p)
   return(p)
 }
+
 
 box_violin_plot_v2.multi = function(input_df, overview_file, select_gene, select_disease, select_tech, select_tissue, log10){
   # remove the NA ones, if no NA, ignore this step
@@ -465,33 +479,37 @@ box_violin_plot_v2.multi = function(input_df, overview_file, select_gene, select
   select_group = overview_file%>%dplyr::filter(Disease%in%select_disease & Technology%in%select_tech & Tissue%in%select_tissue)%>%dplyr::select(ID)%>%unlist%>%as.vector()%>%unique()
   raw_df_select_sample = project_meta%>%as.data.frame()%>%dplyr::filter(dataset%in%select_group)%>%dplyr::select(rawcolumnnames)%>%unlist()%>%as.vector()
   raw_df_summarized = input_df[rowData(input_df)$SYMBOL%in%select_gene,raw_df_select_sample]
-  raw_df_melt = meltAssay(raw_df_summarized, assay_name="FPKM", add_row_data = "SYMBOL", add_col_data = c("dataset", "rawcolumnnames", "Condition"))%>%as.data.frame() # assay.type = "FPKM",
-  raw_df_melt[is.na(raw_df_melt)] <- 0.01
+  raw_df_melt = meltAssay(raw_df_summarized, assay_name="Expression", add_row_data = "SYMBOL", add_col_data = c("dataset", "rawcolumnnames", "Condition", "facet_name"))%>%as.data.frame() # assay.type = "FPKM",
+
+  #print(head(raw_df_melt))
+
+  #raw_df_melt[is.na(raw_df_melt)] <- 0.01
+  raw_df_melt = na.omit(raw_df_melt)
   # color palette
   box_count = length(unique(raw_df_melt$Condition))
   coul = brewer.pal(9, "Set3")
   coul = colorRampPalette(coul)(box_count)
   # log transformation
   if(log10){
-    raw_df_melt$FPKM = log10(raw_df_melt$FPKM)
-    ylab_t = expression(~log[10]~(FPKM))
-  } else{ ylab_t = "FPKM" }
-  p=ggplot(data = raw_df_melt, aes(x=Condition, y=FPKM, fill=Condition))+
-    geom_violin(scale = "width", trim = FALSE, alpha = 0.7)+
+    raw_df_melt$Expression = log10(raw_df_melt$Expression+1)
+    ylab_t = expression(~log[10]~(NormalizedExpression))
+  } else{ ylab_t = "NormalizedExpression" }
+  p=ggplot(data = raw_df_melt, aes(x=Condition, y=Expression, fill=Condition))+
+    geom_violin(scale = "width", trim = T, alpha = 0.7)+
     geom_boxplot(outlier.shape = NA,coef = 0, fill="gray", width=0.3)+
-    coord_flip()+
+    #coord_flip()+
     ylab(ylab_t)+
     xlab("")+
     theme_bw() +
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           axis.text.y = element_text(colour = 'black', size = 10),
-          axis.text.x = element_text(colour = 'black', size = 10, vjust = 1, hjust=1),
+          axis.text.x = element_text(colour = 'black', size = 10),
           legend.position = "none",
           strip.text.y = element_text(angle = 0, size = 10))+
     stat_boxplot(geom='errorbar', linetype=1, width=0.2, position = "dodge2")+
     scale_fill_manual(values= coul) +
-    facet_grid(dataset~., scales = "free", space = "free")
+    facet_wrap(facet_name~., scales = "free", dir = "v", ncol= 1, strip.position="right", drop = F)
   # print(p)
   return(p)
 }
@@ -644,11 +662,11 @@ ProteomicTableDisplay <- function(Path=file.path(homedir, "Proteomic_3"),
                                   alpha = isolate(input$ProteomicPval),
                                   lfc = isolate(input$ProteomicFC),
                                   sigCol=isolate(input$ProteomicHypothesisTestDE)
-                                  ){
+){
   if(!Fname == "Select Dataset"){
-  ProtLis = ProteomicsDataLoad(Path=Path, Fname=Fname, alpha=alpha, lfc=lfc, sigCol=sigCol)
-  temp <- as.data.frame(rowData(ProtLis[[1]]))
-  return(temp)
+    ProtLis = ProteomicsDataLoad(Path=Path, Fname=Fname, alpha=alpha, lfc=lfc, sigCol=sigCol)
+    temp <- as.data.frame(rowData(ProtLis[[1]]))
+    return(temp)
   }
 }
 
@@ -657,45 +675,55 @@ ProteomicTableDisplay <- function(Path=file.path(homedir, "Proteomic_3"),
 ##########################################
 MetaboliteVolcno <- function(met, DataSelect, FCcut, Pcut, sigColSelect, Return){
   if(!DataSelect == "Select Dataset"){
-  select <- as.data.table(met[[DataSelect]])
-  tempDT <- select[,c("Metabolite", "Fold_Change", "log2FoldChange", "t_value", "pval", "padj")]
-  tempDT[,Selected:= "Not selected"]
-  tempDT[,Selected:=ifelse( ( abs(tempDT[["log2FoldChange"]]) > FCcut & tempDT[[sigColSelect]] < Pcut ), "Selected", "Not selected")]
-  if(sigColSelect == "pval"){
-    p <- ggplot(tempDT, aes(x=log2FoldChange,y=-log10(pval), color = Selected)) +
-      xlab("log2(FC)")+ ylab(paste("-log10(", sigColSelect, ")", sep = "")) +
-      ggtitle(names(DataSelect)) +
-      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-            panel.background = element_blank(), axis.line = element_line(colour="black")) +
-      geom_point(data=subset(tempDT, Selected == "Not selected"),
-                 aes(x=log2FoldChange,y=-log10(pval) ),
-                 shape=21, size=2, colour="gray", fill = "gray") +
-      geom_point(data=subset(tempDT, Selected == "Selected"),
-                 aes(x=log2FoldChange,y=-log10(pval) ),
-                 shape=21, size=3, colour="black", fill = "#E31A1C")
+    select <- as.data.table(met[[DataSelect]])
+    tempDT <- select[,c("Metabolite", "Fold_Change", "log2FoldChange", "t_value", "pval", "padj")]
+    tempDT[,Selected:= "Not selected"]
+    tempDT[,Selected:=ifelse( ( abs(tempDT[["log2FoldChange"]]) > FCcut & tempDT[[sigColSelect]] < Pcut ), "Selected", "Not selected")]
+    if(sigColSelect == "pval"){
+      p <- ggplot(tempDT, aes(x=log2FoldChange,y=-log10(pval), color = Selected)) +
+        xlab("log2(FC)")+ ylab(paste("-log10(", sigColSelect, ")", sep = "")) +
+        ggtitle(names(DataSelect)) +
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+              panel.background = element_blank(), axis.line = element_line(colour="black")) +
+        geom_point(data=subset(tempDT, Selected == "Not selected"),
+                   aes(x=log2FoldChange,y=-log10(pval) ),
+                   shape=21, size=2, colour="gray", fill = "gray") +
+        geom_point(data=subset(tempDT, Selected == "Selected"),
+                   aes(x=log2FoldChange,y=-log10(pval) ),
+                   shape=21, size=3, colour="black", fill = "#E31A1C")
+    }
+    if(sigColSelect == "padj"){
+      p <- ggplot(tempDT, aes(x=log2FoldChange,y=-log10(padj), color = Selected)) +
+        xlab("log2(FC)")+ ylab(paste("-log10(", sigColSelect, ")", sep = "")) +
+        ggtitle(names(DataSelect)) +
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+              panel.background = element_blank(), axis.line = element_line(colour="black")) +
+        geom_point(data=subset(tempDT, Selected == "Not selected"),
+                   aes(x=log2FoldChange,y=-log10(padj) ),
+                   shape=21, size=2, colour="gray", fill = "gray") +
+        geom_point(data=subset(tempDT, Selected == "Selected"),
+                   aes(x=log2FoldChange,y=-log10(padj) ),
+                   shape=21, size=3, colour="black", fill = "#E31A1C")
+    }
+    statement <- as.data.frame(list(c(
+      paste("Total genes:", nrow(tempDT)),
+      paste("Total Selected:", nrow(tempDT[Selected == "Selected",])),
+      paste("Total Not Selected", nrow(tempDT[Selected == "Not selected",])),
+      paste("Total Up-regulated Selected:", nrow(tempDT[Selected == "Selected" & log2FoldChange > 0,])),
+      paste("Total Down-regulated Selected:", nrow(tempDT[Selected == "Selected" & log2FoldChange < 0,])))  ))
+    colnames(statement) <- " "
+    if(Return == "DT"){return(tempDT)}
+    if(Return == "plot"){return(p)}
+    if(Return == "Counts"){return(statement)}
   }
-  if(sigColSelect == "padj"){
-    p <- ggplot(tempDT, aes(x=log2FoldChange,y=-log10(padj), color = Selected)) +
-      xlab("log2(FC)")+ ylab(paste("-log10(", sigColSelect, ")", sep = "")) +
-      ggtitle(names(DataSelect)) +
-      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-            panel.background = element_blank(), axis.line = element_line(colour="black")) +
-      geom_point(data=subset(tempDT, Selected == "Not selected"),
-                 aes(x=log2FoldChange,y=-log10(padj) ),
-                 shape=21, size=2, colour="gray", fill = "gray") +
-      geom_point(data=subset(tempDT, Selected == "Selected"),
-                 aes(x=log2FoldChange,y=-log10(padj) ),
-                 shape=21, size=3, colour="black", fill = "#E31A1C")
-  }
-  statement <- as.data.frame(list(c(
-    paste("Total genes:", nrow(tempDT)),
-    paste("Total Selected:", nrow(tempDT[Selected == "Selected",])),
-    paste("Total Not Selected", nrow(tempDT[Selected == "Not selected",])),
-    paste("Total Up-regulated Selected:", nrow(tempDT[Selected == "Selected" & log2FoldChange > 0,])),
-    paste("Total Down-regulated Selected:", nrow(tempDT[Selected == "Selected" & log2FoldChange < 0,])))  ))
-  if(Return == "DT"){return(tempDT)}
-  if(Return == "plot"){return(p)}
-  if(Return == "Counts"){return(statement)}
+}
+
+#################################
+#### Load methylation tables ####
+#################################
+methylationDTload <- function(dataset){
+  if(!dataset == "Select Dataset"){
+    return(readRDS(file.path(homedir, "Methylation", paste(dataset, ".rds", sep = "" ) )))
   }
 }
 
@@ -752,16 +780,16 @@ server <- function(input, output, session) {
 
   output$DETable <- DT::renderDT(
     DETableDisplay(DESE = DESE, Dataset = input$Dataset, Comparison = input$Comparison
-                   ), filter = 'top', options = list(pageLength = 15, scrollX = TRUE, scrollY = '400px', autoWidth = TRUE, dom = 'ltipr'), escape = FALSE )
+    ), filter = 'top', options = list(pageLength = 15, scrollX = TRUE, scrollY = '400px', autoWidth = TRUE, dom = 'ltipr'), escape = FALSE )
 
   ########################
   #### DE Heatmap tab ####
   ########################
   updateSelectizeInput(session, 'GenesHeat', choices = unique(genesAll), server = TRUE, selected = c("ACTR2","ALAS1","NFKB2","PSMB9","RFC2","TCF4","TRAF6","ABLIM1","ACSM3","ADD3","ADH5","ALDH9A1","ANXA1","ANXA3","AOX1","AP1B1","AR","ARF4","ATP2C1","ATP6AP2","BAIAP2","CCDC6","CCT8","CD48",
-                                                                                                                       "CHERP","COL4A1","COL6A3","CPOX","CREB1","CTBS","CYB5A","DAD1","DLGAP4","DOCK4","DST","EIF2B1","EMD","EPM2AIP1","FILIP1L","GGCX","GHR","HMG20B","HMGCR","HNRNPA2B1","IGF1","IMPA1","IQGAP1","ITGA9",
-                                                                                                                       "LPP","MSH6","NARS2","NENF","NOL7","PCK1","PCYT2","PFKFB1","PIGK","PLCB3","PMM1","POLRMT","PON3","PROS1","PSMB3","PTPN2","RAD52","RBM34","RLF","RRM1","SDHC","SELENBP1","SERPINB8","SLC12A2",
-                                                                                                                       "SLC4A4","SNX10","SP100","SREBF2","SUCLG1","TM7SF2","TMEM97","TNK2","TRIO","TSC22D2","TXN2","USP14","VPS41","XPA","ZBTB17","ZER1","AKAP13","DAB2","FMO1","AKR1A1","COX8A","EMP2","GSTM1","HINT1",
-                                                                                                                       "NDUFA2","PTPN18","ANKRD46","HMGCL","SLC37A4","CHSY1","ACOT2","ERCC5","HSPE1"))
+                                                                                                     "CHERP","COL4A1","COL6A3","CPOX","CREB1","CTBS","CYB5A","DAD1","DLGAP4","DOCK4","DST","EIF2B1","EMD","EPM2AIP1","FILIP1L","GGCX","GHR","HMG20B","HMGCR","HNRNPA2B1","IGF1","IMPA1","IQGAP1","ITGA9",
+                                                                                                     "LPP","MSH6","NARS2","NENF","NOL7","PCK1","PCYT2","PFKFB1","PIGK","PLCB3","PMM1","POLRMT","PON3","PROS1","PSMB3","PTPN2","RAD52","RBM34","RLF","RRM1","SDHC","SELENBP1","SERPINB8","SLC12A2",
+                                                                                                     "SLC4A4","SNX10","SP100","SREBF2","SUCLG1","TM7SF2","TMEM97","TNK2","TRIO","TSC22D2","TXN2","USP14","VPS41","XPA","ZBTB17","ZER1","AKAP13","DAB2","FMO1","AKR1A1","COX8A","EMP2","GSTM1","HINT1",
+                                                                                                     "NDUFA2","PTPN18","ANKRD46","HMGCL","SLC37A4","CHSY1","ACOT2","ERCC5","HSPE1"))
 
   output$heatMessage <- reactive({if(input$FCMultiBar < 1){print("The fold change value you entered is less than 1. Please enter a fold change value greater than or equal to 1.")} })
 
@@ -803,7 +831,16 @@ server <- function(input, output, session) {
   ##########################################################
   updateSelectizeInput(session, 'Gene_single', choices = unique(genesAll), server = TRUE, selected = c("GAPDH"))
   select_gene = function(){return(input$Gene_single)}
+
+  anyna_single = reactive({check_na(raw_df, select_gene(), input$Dataset_single)})
+
+  output$text_single <- renderText({
+    if(anyna_single()){"Some of the selected gene(s) not available in the selected dataset"}
+    else{"Here is the plot!"}
+  })
+
   violin_single=reactive({box_violin_plot_v2.single(raw_df, select_gene(), input$Dataset_single, input$log_single)})
+
   output$contents_single = renderPlot(violin_single())
 
   output$single_data_plot <- renderUI({
@@ -829,6 +866,14 @@ server <- function(input, output, session) {
 
   select_df.multi = function(){return(overview%>%dplyr::filter(Disease%in%select_dis.multi() & Technology%in%select_tech.multi() & Tissue%in%select_tissue.multi())%>%dplyr::select(ID)%>%unlist%>%as.vector()%>%unique())}
 
+  anyna_multi = reactive({check_na(raw_df, input$Gene_multi, select_df.multi())})
+
+  output$text_multi <- renderText({
+    if(anyna_multi()){"The selected gene not available in some of the selected dataset(s)"}
+    else{"Here is the plot!"}
+  })
+
+
   violin_multi=reactive({box_violin_plot_v2.multi(raw_df, overview, input$Gene_multi,  select_dis.multi(), select_tech.multi(),  select_tissue.multi(), input$log_multi)})
   output$contents_multi = renderPlot(violin_multi())
 
@@ -842,6 +887,7 @@ server <- function(input, output, session) {
     content = function(file){
       ggsave(file, violin_multi(), device = input$extension_multi, width = 9, height = length(select_df.multi())*3)
     })
+
 
   ########################
   #### Proteomics tab ####
@@ -894,8 +940,13 @@ server <- function(input, output, session) {
                      sigColSelect = input$MetabolomicsHypothesisTestDE,
                      Return = "DT") })
 
+  #########################
+  #### Methylation tab ####
+  #########################
+  output$MethylationDETable <- DT::renderDT({
+    methylationDTload(dataset= input$MethylationDataset)
+  })
 
 }
-
 
 

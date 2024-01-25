@@ -2,10 +2,8 @@
 ############################
 #### set up environment ####
 ############################
-install.packages("path to tar file/MultiOmics_0.1.0.tar.gz", repos = NULL, type="source")
-library(MultiOmics); library(data.table); library(shiny)
+library(MultiOmics); library(data.table)
 homedir <- "path to database/MultiOmicsAnalysis"
-makeDirectory(homedir)
 setwd(homedir)
 
 #####################################
@@ -54,45 +52,21 @@ checkFile <- GEO2RDirectionCheck(DBPath=file.path(homedir, "AppData"),
                                  gsm=overview$ComparisonVector,
                                  Technology = overview$Technology,
                                  GraphPath = file.path(homedir, "DirectionCheck"),
-                                 subsetRaw = FALSE)
+                                 subsetRaw = FALSE,
+                                 writeRaw=overview$DownloadRawData,
+                                 RawQCPath = file.path(homedir, "RawQC"))
 checkFile[[1]][correlation < 0,]
 fwrite(checkFile[[1]], file.path("./OverviewFiles/ArrayCheck.xls"), row.names = FALSE, quote = FALSE, sep = "\t")
 
 ####################################################################################################
 #### Create or update Summarized experiment objects that integrate all data sets: DEG data only #### Checks for comparisons that are already in the database
-#################################################################################################### Duplicated comparisons are not deleted from "5_AppData"
+#################################################################################################### Duplicated comparisons are not deleted from "AppData"
 (DESE <- DESEGenerate(DEGDatapath=file.path(homedir, "AppData"), SEPath = file.path(homedir, "ProcessFiles", "SumarizedExp_DB.rds") ))
 (DESE <- readRDS(file.path(homedir, "ProcessFiles", "SumarizedExp_DB.rds")))
 
 #########################################
-#### Create or update Raw data files #### Expression levels of duplicated genes are averaged. (Usually occurs with datasets generated using array technology if multiple probes measure the expression level of a gene.)
-######################################### Note: sleep is only required if using a computer that synchronizes the compiled table to a cloud server.
-#### Add Array data ####
-RawDataCompile(Fpath = file.path(homedir, "AppData"), outPath = file.path("./ProcessFiles/RawData.txt"), CheckIdenticalData = FALSE, StartAt = 1, sleep = 60, DataType = "Array")
-RawArrayComplete <- fread(file.path("./ProcessFiles/RawData.txt"))
-
-#############################################
-#### remove files from staging directory #### # Optional
-#############################################
-# files <- list.files(file.path(homedir, "AppData"))
-# # files <- files[grepl(".rds", files) & grepl("_Raw", files)] # un-comment to remove only raw files
-# for(b in 1:length(files)){fn <- file.path(homedir, "AppData", files[b]); if (file.exists(fn)){ file.remove(fn)}}
-
-############################################
-#### Create meta data for Raw data file #### # note RNAseq RunInfo files need to be downloaded manually and stored in the
-############################################ # RunInfoFiles directory with the naming convention: "GSEXXXXX_SraRunTable.txt".
-metaDF <- MetDataCompile(RNAseqFilePath= file.path(homedir, "RunInfo"), ArrayFilePath= file.path(homedir, "ArrayMetaData"), overview = overview)
-
-#####################################################
-#### Create raw data summarizedExperiment object ####
-#####################################################
-library(SummarizedExperiment)
-RawSE <- GenerateRawSE(df = metaDF, ArrayDT=RawArrayComplete)
-saveRDS(RawSE, file=file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))
-RawSE <- readRDS(file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))
-assay(RawSE)[1:5,1:5]
-rowData(RawSE)
-colData(RawSE)
+#### Create or update Raw data files ####
+#########################################
 
 ################################################################################
 ################################################################################
@@ -219,37 +193,15 @@ dataDiffNorm
 ###############################
 SaveToProteomicDB(SEList=dataDiffNorm, Path=file.path(homedir, "Proteomic_3"))
 
-#################################################
-#### Load selected Sumarized experiment file ####
-#################################################
-files <- list.files(file.path(homedir, "Proteomic_3"))
-SelectedList <- ProteomicSELoad(Path=file.path(homedir, "Proteomic_3"), Fname=files[1])
-
-###################################################################
-#### Denote significant proteins based on user defined cutoffs ####
-###################################################################
-DEPList <- SigDEAnnotate(dataDiff=dataDiffNorm, alpha = Pcut, lfc = FCcut, sigCol= sigCol)
-DEPList[[1]]
-colData(DEPList[[1]])
-rowData(DEPList[[1]])
-assay(DEPList[[1]])
-
-#######################
-#### volcano plots ####
-#######################
-if(sigCol == "p.adj"){adj <- TRUE; BHadj <- FALSE
-} else if(sigCol == "p.val"){ adj <- FALSE; BHadj <- FALSE
-} else if(sigCol == "BHCorrection"){ adj <- FALSE; BHadj <- TRUE}
-PlotList <- VolcanoPlot(DEPList = DEPList, ComparisonList=compList2, ymin = 0, ymax = 15, xmin = -7.5, xmax = 7.5, addNames = FALSE, Adjusted = adj, BHadjust = BHadj)
-PlotList[[1]]
-
 ################################################################################
 ################################################################################
 #### Load app ##################################################################
 ################################################################################
 ################################################################################
-Appetup(homedir)
+library(shiny)
+AppSetup(homedir)
 runApp("./Scripts")
+
 
 
 

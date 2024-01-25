@@ -13,7 +13,7 @@ homedir <- "<path to data base>"
 DESE <- readRDS(file.path(homedir, "ProcessFiles", "SumarizedExp_DB.rds"))
 AvailComps <- data.table(Dataset = gsub("_.+", "", names(assays(DESE))), Comparison = gsub("^.+?_", "", names(assays(DESE))) )
 # Raw RNA expression data
-raw_df = readRDS(file.path(homedir, "ProcessFiles", "fpkm_subset.v2.RDS"))
+raw_df = readRDS(file.path(homedir, "ProcessFiles", "expression_norm.v2.RDS"))
 genesAll = rowData(raw_df)$SYMBOL
 dataAll = unique(colData(raw_df)$dataset)%>%na.omit()
 overviewfile = fread(file.path(homedir, "OverviewFiles", "GEODataOverview3.csv"))%>%as.data.frame()
@@ -25,6 +25,9 @@ ProteomicAvail <- gsub(".rds", "", list.files(file.path(homedir, "Proteomic_3"))
 #### Metabolomics data ####
 metabolomicsData <- readRDS(file.path(homedir, "Metabolomics", "mtbls298.de.RDS"))
 names(metabolomicsData) <- c("Basal_Artery_Basal_Vein", "Insulin_Artery_Insulin_Vein")
+#### Methylation data ####
+Metfiles <- list.files(file.path(homedir, "Methylation"))
+Metfiles <- gsub(".rds", "", Metfiles[grepl(".rds", Metfiles)])
 
 #### App Interface ####
 #######################
@@ -46,12 +49,14 @@ ui <- fluidPage(
                         titlePanel("Expression Exploration"),
                         fluidRow(
                           column(3, wellPanel(selectizeInput("Dataset_single", "Select Dataset:", choices = dataAll,
-                                                  selected = "GSE103682", multiple = FALSE),
+                                                             selected = "GSE102485", multiple = FALSE),
                                               selectizeInput("Gene_single", "Select genes of interest:", choices = NULL,
-                                                  multiple = TRUE, width = '100%',  size = 6),
+                                                             multiple = TRUE, width = '100%',  size = 6),
                                               materialSwitch(inputId = "log_single",label = "Log scale"),
                                               actionButton("Expressionsubmit", "Submit")) ),
-                          column(9, uiOutput('single_data_plot'),
+                          column(9,
+                                 verbatimTextOutput("text_single"),
+                                 uiOutput('single_data_plot'),
                                  wellPanel(
                                    radioButtons("extension_single", "Save As:",
                                                 choices = c("png", "pdf", "svg"), inline = TRUE),
@@ -62,19 +67,21 @@ ui <- fluidPage(
                         titlePanel("Expression Exploration"),
                         fluidRow(
                           column(3, wellPanel( selectizeInput("Disease_multi", "Select Disease:", choices = diseaseAll,
-                                                  selected = "Heart Failure", multiple = TRUE ),
-                                   selectizeInput("Tissue_multi", "Select Tissue:", choices = tissueAll,
-                                                  selected = "Heart", multiple = TRUE ),
-                                   selectizeInput("Tech_multi", "Select Technology:", choices = c("Array", "RNAseq"),
-                                                  selected = techAll, multiple = TRUE ),
-                                   selectizeInput("Gene_multi", "Select gene of interest:", choices = NULL,
-                                                  multiple = FALSE, width = '100%',  size = 6),
-                                   materialSwitch(inputId = "log_multi",label = "Log scale"),
-                                   actionButton("Expressionsubmit", "Submit") )  ),
-                          column(9, uiOutput('multi_data_plot'),
+                                                              selected = "Heart Failure", multiple = TRUE ),
+                                               selectizeInput("Tissue_multi", "Select Tissue:", choices = tissueAll,
+                                                              selected = "Heart", multiple = TRUE ),
+                                               selectizeInput("Tech_multi", "Select Technology:", choices = c("Array", "RNAseq"),
+                                                              selected = techAll, multiple = TRUE ),
+                                               selectizeInput("Gene_multi", "Select gene of interest:", choices = NULL,
+                                                              multiple = FALSE, width = '100%',  size = 6),
+                                               materialSwitch(inputId = "log_multi",label = "Log scale"),
+                                               actionButton("Expressionsubmit", "Submit") )  ),
+                          column(9,
+                                 verbatimTextOutput("text_multi"),
+                                 uiOutput('multi_data_plot'),
                                  wellPanel( radioButtons("extension_multi", "Save As:",
-                                                choices = c("png", "pdf", "svg"), inline = TRUE),
-                                   downloadButton("download_multi", "Save Plot")
+                                                         choices = c("png", "pdf", "svg"), inline = TRUE),
+                                            downloadButton("download_multi", "Save Plot")
                                  )))   ),
 
                tabPanel("Differential Expression Analysis", fluid = TRUE,
@@ -133,25 +140,29 @@ ui <- fluidPage(
 
              ) ,width = 10),
 
-               tabPanel("Proteomics", fluid = TRUE,
-                        sidebarPanel(
-                          selectInput("ProteomicDataset", "Select Dataset:", choices = c(ProteomicAvail, "Select Dataset"), selected = "Select Dataset"),
-                          numericInput("ProteomicFC", "Enter log2(Fold Change) cutoff", 1, min = 0, max = 70),
-                          selectInput("ProteomicHypothesisTestDE", "Hypothesis Test", choices = c("p.adj", "p.val", "BHCorrection"), multiple = FALSE, selected = "p.adj"),
-                          numericInput("ProteomicPval", "Enter significance cutoff", 0.05, min = 0, max = 1),
-                          actionButton("ProteomicSubmit", "Plot Selection"),
-                          uiOutput("Proteomictext")  ),
-                        mainPanel(markdown(' <br> <br> <br>'),
-                                  plotOutput("Proteomicvolcano")  ),
-                        DT::dataTableOutput("ProteomicDETable") ),
+    tabPanel("Proteomics", fluid = TRUE,
+             sidebarPanel(
+               selectInput("ProteomicDataset", "Select Dataset:", choices = c(ProteomicAvail, "Select Dataset"), selected = "Select Dataset"),
+               numericInput("ProteomicFC", "Enter log2(Fold Change) cutoff", 1, min = 0, max = 70),
+               selectInput("ProteomicHypothesisTestDE", "Hypothesis Test", choices = c("p.adj", "p.val", "BHCorrection"), multiple = FALSE, selected = "p.adj"),
+               numericInput("ProteomicPval", "Enter significance cutoff", 0.05, min = 0, max = 1),
+               actionButton("ProteomicSubmit", "Plot Selection"),
+               uiOutput("Proteomictext")  ),
+             mainPanel(markdown(' <br> <br> <br>'),
+                       plotOutput("Proteomicvolcano")  ),
+             DT::dataTableOutput("ProteomicDETable") ),
 
-               tabPanel("Methylation", fluid = TRUE,
-
-               ),
+    tabPanel("Methylation", fluid = TRUE,
+             sidebarPanel(
+               selectInput("MethylationDataset", "Select Dataset:", choices = c(Metfiles, "Select Dataset"), selected = "Select Dataset"),
+             ),
+             mainPanel(   ),
+             DT::dataTableOutput("MethylationDETable")
+    ),
 
     tabPanel("Metabolomics", fluid = TRUE,
              sidebarPanel(
-               selectInput("MetabolomicsDataset", "Select Dataset:", choices = c(names(metabolomicsData), "Select Dataset"), selected = "Select Dataset"),
+               selectInput("MetabolomicsDataset", "Select Comparison:", choices = c(names(metabolomicsData), "Select Dataset"), selected = "Select Dataset"),
                numericInput("MetabolomicsFC", "Enter log2(Fold Change) cutoff", 1, min = 0, max = 70),
                selectInput("MetabolomicsHypothesisTestDE", "Hypothesis Test", choices = c("pval", "padj"), multiple = FALSE, selected = "pval"),
                numericInput("MetabolomicsPval", "Enter significance cutoff", 0.05, min = 0, max = 1),
@@ -164,13 +175,5 @@ ui <- fluidPage(
 
 
 
-    ) )
-
-
-
-
-
-
-
-
+  ) )
 
