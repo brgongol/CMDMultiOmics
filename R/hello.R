@@ -1177,13 +1177,10 @@ FormatMaxQuant <- function(path){
       MZList[[i]] <- data
       names(MZList)[i] <- files[i]
     }
-    if(files[i] == "PXD011536"){
+    if(files[i] == "PXD011563"){
       fpath <- file.path(path, files[i])
       fpath <- file.path(fpath, list.files(fpath))
-      # nam <- fread(fpath[grepl("mzRange.txt", fpath)])
       data <- fread(fpath[grepl("proteinGroups.txt", fpath)])
-      setnames(data, c("Fasta headers"), c("Protein names"))
-      data$`Gene names` <- data$`Protein names`
       data <- data[,c("Majority protein IDs","Peptide counts (all)", colnames(data)[grep("Intensity", colnames(data), ignore.case = TRUE)],
                       "Protein names", "Gene names"), with = FALSE]
       data$Sample <- "Microparticle"
@@ -1193,7 +1190,7 @@ FormatMaxQuant <- function(path){
                       colnames(data)[grepl("LFQ", colnames(data))]), with = FALSE]
       setnames(data, colnames(data)[1:5], c("Sample", "ProteinID", "GeneSymbol", "Description", "Numberofpeptides"))
       data$Numberofpeptides <- sapply(data$Numberofpeptides, function(x){ sum(as.numeric(strsplit(x, ";")[[1]])) })
-      Cnames <- gsub("-.+", "", colnames(data) )
+      Cnames <- gsub("_.+", "", colnames(data) )
       Cnames <- makeunique::make_unique(Cnames, "_", wrap_in_brackets = FALSE)
       setnames(data, colnames(data), Cnames)
       MZList[[i]] <- data
