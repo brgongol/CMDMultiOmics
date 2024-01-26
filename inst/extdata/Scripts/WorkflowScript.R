@@ -73,8 +73,6 @@ fwrite(checkFile[[1]], file.path("./OverviewFiles/ArrayCheck.xls"), row.names = 
 #### Proteomic data workflow ###################################################
 ################################################################################
 ################################################################################
-library(DEP); library(readxl); library(readr); library(stringr)
-library(rpx); library(RforProteomics); library(BiocFileCache); library(data.table); library(readxl); library(textclean)
 
 ############################
 #### Load overview file ####
@@ -91,7 +89,6 @@ overviewpProteomics <- overview[DataType == "Proteomic",]
 ############################################
 #### Loop through files and format data ####
 ############################################
-library(makeunique)
 # MZList <- FormatMaxQuant(path = file.path(homedir, "Proteomic_1"))
 # names(MZList)
 
@@ -124,7 +121,6 @@ TotMel
 #############################################################################################
 #### Filter for proteins that are identified in all replicates of at least one condition ####
 #############################################################################################
-library(radiant.data); library(tidyr); library(dplyr); library(tidyverse)
 dataFiltList <- DataFilter(dataSeList=tissueSplitList, thr = 0)
 assay(dataFiltList[[3]])
 rowData(dataFiltList[[3]])
@@ -140,7 +136,6 @@ colnames(assay(dataPepCutOff[[1]]))
 ###############################
 #### Perform normalization ####
 ###############################
-library(NormalyzerDE)
 MultiNormalizeList <- MultiNormalization(dataPepCutOff=dataPepCutOff)
 names(MultiNormalizeList)
 
