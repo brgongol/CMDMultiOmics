@@ -1177,8 +1177,53 @@ FormatMaxQuant <- function(path){
       MZList[[i]] <- data
       names(MZList)[i] <- files[i]
     }
+    if(files[i] == "PXD011536"){
+      fpath <- file.path(path, files[i])
+      fpath <- file.path(fpath, list.files(fpath))
+      # nam <- fread(fpath[grepl("mzRange.txt", fpath)])
+      data <- fread(fpath[grepl("proteinGroups.txt", fpath)])
+      setnames(data, c("Fasta headers"), c("Protein names"))
+      data$`Gene names` <- data$`Protein names`
+      data <- data[,c("Majority protein IDs","Peptide counts (all)", colnames(data)[grep("Intensity", colnames(data), ignore.case = TRUE)],
+                      "Protein names", "Gene names"), with = FALSE]
+      data$Sample <- "Microparticle"
+      data <- cbind(data[,!grepl("intensity", colnames(data), ignore.case = TRUE), with = FALSE],
+                    data[,grepl("LFQ", colnames(data), ignore.case = TRUE), with = FALSE])
+      data <- data[,c("Sample", "Majority protein IDs", "Gene names", "Protein names", "Peptide counts (all)",
+                      colnames(data)[grepl("LFQ", colnames(data))]), with = FALSE]
+      setnames(data, colnames(data)[1:5], c("Sample", "ProteinID", "GeneSymbol", "Description", "Numberofpeptides"))
+      data$Numberofpeptides <- sapply(data$Numberofpeptides, function(x){ sum(as.numeric(strsplit(x, ";")[[1]])) })
+      Cnames <- gsub("-.+", "", colnames(data) )
+      Cnames <- makeunique::make_unique(Cnames, "_", wrap_in_brackets = FALSE)
+      setnames(data, colnames(data), Cnames)
+      MZList[[i]] <- data
+      names(MZList)[i] <- files[i]
+    }
+    if(files[i] == "PXD024734"){
+      fpath <- file.path(path, files[i])
+      fpath <- file.path(fpath, list.files(fpath))
+      # nam <- fread(fpath[grepl("mzRange.txt", fpath)])
+      data <- fread(fpath[grepl("proteinGroups.txt", fpath)])
+      # setnames(data, c("Fasta headers"), c("Protein names"))
+      # data$`Gene names` <- data$`Protein names`
+      data <- data[,c("Majority protein IDs","Peptide counts (all)", colnames(data)[grep("Intensity", colnames(data), ignore.case = TRUE)],
+                      "Protein names", "Gene names"), with = FALSE]
+      data$Sample <- "Adipose"
+      data <- cbind(data[,!grepl("intensity", colnames(data), ignore.case = TRUE), with = FALSE],
+                    data[,grepl("LFQ", colnames(data), ignore.case = TRUE), with = FALSE])
+      data <- data[,c("Sample", "Majority protein IDs", "Gene names", "Protein names", "Peptide counts (all)",
+                      colnames(data)[grepl("LFQ", colnames(data))]), with = FALSE]
+      setnames(data, colnames(data)[1:5], c("Sample", "ProteinID", "GeneSymbol", "Description", "Numberofpeptides"))
+      data$Numberofpeptides <- sapply(data$Numberofpeptides, function(x){ sum(as.numeric(strsplit(x, ";")[[1]])) })
+      Cnames <- gsub("[0-9]+", "", colnames(data) )
+      Cnames <- makeunique::make_unique(Cnames, "_", wrap_in_brackets = FALSE)
+      setnames(data, colnames(data), Cnames)
+      MZList[[i]] <- data
+      names(MZList)[i] <- files[i]
+    }
   }
   MZList <- MZList[!names(MZList) == ""]
+  MZList <- MZList[!is.na(names(MZList))]
   return(MZList)
 }
 
@@ -1668,12 +1713,3 @@ plot_volcano2 <- function (dep, contrast, label_size = 3, add_names = TRUE, adju
     if (adjusted) { colnames(df)[3] <- "adjusted_p_value_-log10" }
     if (BHadjusted) { colnames(df)[3] <- "BH_adjusted_p_value_-log10" }
     return(df) } }
-
-
-
-
-
-
-
-
-
