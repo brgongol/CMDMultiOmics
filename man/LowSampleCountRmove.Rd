@@ -7,7 +7,7 @@
 LowSampleCountRmove(VarRMList, cut)
 }
 \arguments{
-\item{VarRMList}{A list of summarizedExperiment objects.}
+\item{VarRMList}{A list of SummarizedExperiment objects.}
 
 \item{cut}{The minimum cutoff for samples.}
 }

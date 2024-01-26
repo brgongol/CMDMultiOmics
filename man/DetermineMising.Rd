@@ -7,7 +7,7 @@
 DetermineMising(data)
 }
 \arguments{
-\item{data}{A list of summarizedExperiment objects.}
+\item{data}{A list of SummarizedExperiment objects.}
 }
 \description{
 Count missing values

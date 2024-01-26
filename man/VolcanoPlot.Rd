@@ -17,7 +17,7 @@ VolcanoPlot(
 )
 }
 \arguments{
-\item{DEPList}{A list of summarizedExperiment objects}
+\item{DEPList}{A list of SummarizedExperiment objects}
 
 \item{ComparisonList}{A named vector of comparisons that were made.}
 

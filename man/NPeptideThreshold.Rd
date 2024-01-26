@@ -7,7 +7,7 @@
 NPeptideThreshold(dataFiltList, Npeptides = 2)
 }
 \arguments{
-\item{dataFiltList}{A list of summarizedExperiment objects.}
+\item{dataFiltList}{A list of SummarizedExperiment objects.}
 
 \item{Npeptides}{The number of peptides to filter by.}
 }

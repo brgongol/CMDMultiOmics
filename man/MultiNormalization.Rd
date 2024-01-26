@@ -7,7 +7,7 @@
 MultiNormalization(dataPepCutOff)
 }
 \arguments{
-\item{dataPepCutOff}{A list of summarizedExperiment objects.}
+\item{dataPepCutOff}{A list of SummarizedExperiment objects.}
 }
 \description{
 Multiple normalization

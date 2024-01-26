@@ -3,7 +3,7 @@
 #' Create directories
 #'
 #' @param homedir The directory where the database will be stored
-#' @import R.utils
+#' @importFrom R.utils copyDirectory
 #' @export
 makeDirectory <- function(homedir){
   dirs <- c(homedir,
@@ -25,7 +25,9 @@ makeDirectory <- function(homedir){
 #' Compile Array annotation information
 #'
 #' @param PlatInfo A csv file containing a table of the Array information
-#' @import data.table
+#' @importFrom data.table data.table
+#' @importFrom data.table as.data.table
+#' @importFrom AnnotationDbi select
 #' @import clariomdhumantranscriptcluster.db
 #' @import hugene10sttranscriptcluster.db
 #' @import hugene20sttranscriptcluster.db
@@ -37,14 +39,13 @@ makeDirectory <- function(homedir){
 #' @import hgu133a.db
 #' @import org.Hs.eg.db
 #' @import GEOquery
-#' @import dplyr
 #' @export
 PlatformAnnotationLoad <- function(PlatInfo){
   AnnotationDT <- data.table()
   for(i in 1:nrow(PlatInfo)){
     if(PlatInfo$GPLNumber[i] == "GPL23126"){
       # BiocManager::install("clariomdhumantranscriptcluster.db")
-      library(clariomdhumantranscriptcluster.db)
+      # library(clariomdhumantranscriptcluster.db)
       x<-clariomdhumantranscriptclusterGENENAME
       mapped_probes<-mappedkeys(x)
       GENENAME <- unlist(as.list(x[mapped_probes]))
@@ -116,7 +117,7 @@ PlatformAnnotationLoad <- function(PlatInfo){
       AnnotationDT <- rbind(AnnotationDT, GPL14951)
     } else if(PlatInfo$GPLNumber[i] == "GPL6244"){
       # BiocManager::install("hugene10sttranscriptcluster.db")
-      library(hugene10sttranscriptcluster.db)
+      # library(hugene10sttranscriptcluster.db)
       x<-hugene10sttranscriptclusterGENENAME
       mapped_probes<-mappedkeys(x)
       GENENAME <- unlist(as.list(x[mapped_probes]))
@@ -134,7 +135,7 @@ PlatformAnnotationLoad <- function(PlatInfo){
       AnnotationDT <- rbind(AnnotationDT, GPL6244)
     } else if(PlatInfo$GPLNumber[i] == "GPL16686"){
       # BiocManager::install("hugene20sttranscriptcluster.db")
-      library(hugene20sttranscriptcluster.db)
+      # library(hugene20sttranscriptcluster.db)
       x<-hugene20sttranscriptclusterGENENAME
       mapped_probes<-mappedkeys(x)
       GENENAME <- unlist(as.list(x[mapped_probes]))
@@ -170,7 +171,7 @@ PlatformAnnotationLoad <- function(PlatInfo){
       AnnotationDT <- rbind(AnnotationDT, GPL570)
     } else if(PlatInfo$GPLNumber[i] == "GPL11532"){
       # BiocManager::install("hugene11sttranscriptcluster.db")
-      library(hugene11sttranscriptcluster.db)
+      # library(hugene11sttranscriptcluster.db)
       x<-hugene11sttranscriptclusterGENENAME
       mapped_probes<-mappedkeys(x)
       GENENAME <- unlist(as.list(x[mapped_probes]))
@@ -188,7 +189,7 @@ PlatformAnnotationLoad <- function(PlatInfo){
       AnnotationDT <- rbind(AnnotationDT, GPL11532)
     } else if(PlatInfo$GPLNumber[i] == "GPL14877"){
       # BiocManager::install("hgu133plus2.db")
-      library(hgu133plus2.db)
+      # library(hgu133plus2.db)
       x<-hgu133plus2GENENAME
       mapped_probes<-mappedkeys(x)
       GENENAME <- unlist(as.list(x[mapped_probes]))
@@ -207,7 +208,7 @@ PlatformAnnotationLoad <- function(PlatInfo){
       AnnotationDT <- rbind(AnnotationDT, GPL14877)
     } else if(PlatInfo$GPLNumber[i] == "GPL2895"){
       # BiocManager::install("hwgcod.db")
-      library(hwgcod.db)
+      # library(hwgcod.db)
       x<-hwgcodGENENAME
       mapped_probes<-mappedkeys(x)
       GENENAME <- unlist(as.list(x[mapped_probes]))
@@ -251,7 +252,7 @@ PlatformAnnotationLoad <- function(PlatInfo){
       AnnotationDT <- rbind(AnnotationDT, GPL14550)
     } else if(PlatInfo$GPLNumber[i] == "GPL17586"){
       # BiocManager::install("hta20transcriptcluster.db")
-      library(hta20transcriptcluster.db)
+      # library(hta20transcriptcluster.db)
       x<-hta20transcriptclusterGENENAME
       mapped_probes<-mappedkeys(x)
       GENENAME <- unlist(as.list(x[mapped_probes]))
@@ -498,8 +499,15 @@ PlatformAnnotationLoad <- function(PlatInfo){
 #' @param subsetRaw Either TRUE or FALSE indicating if the raw data should be subsetted to only the columns used in fold change calculations.
 #' @param sleep The number of seconds each iteration should wait before starting the next.
 #' @import Biobase
-#' @import limma
-#' @import DESeq2
+#' @importFrom stats model.matrix
+#' @importFrom limma lmFit
+#' @importFrom limma makeContrasts
+#' @importFrom limma contrasts.fit
+#' @importFrom limma eBayes
+#' @importFrom limma topTable
+#' @importFrom DESeq2 DESeqDataSetFromMatrix
+#' @importFrom DESeq2 DESeq
+#' @importFrom DESeq2 results
 #' @import GEOquery
 #' @export
 GEOCompile <- function(DS, gpl, gsm, namestr, nameraw, PlatAnnotInfo, destdir, filename=NULL,
@@ -619,7 +627,7 @@ GEOCompile <- function(DS, gpl, gsm, namestr, nameraw, PlatAnnotInfo, destdir, f
       tbl <- tbl[keep, ]
       ds <- DESeqDataSetFromMatrix(countData=tbl, colData=sample_info, design= ~Group)
       ds <- DESeq(ds, test="Wald", sfType="poscount")
-      r <- results (ds, contrast=c("Group", groups[2], groups[1]), alpha=0.05, pAdjustMethod ="fdr")
+      r <- results(ds, contrast=c("Group", groups[2], groups[1]), alpha=0.05, pAdjustMethod ="fdr")
       tT <- r[order(r$padj)[1:length(r$padj)],]
       tT <- merge(as.data.frame(tT), annot, by=0, sort=F)
       tT <- subset(tT, select=c("GeneID","padj","pvalue","lfcSE","stat","log2FoldChange","baseMean","Symbol","Description"))
@@ -826,6 +834,7 @@ GEO2RDirectionCheck <- function(DBPath, DS, namestr, gsm, Technology, GraphPath,
 #' @import org.Hs.eg.db
 #' @import SummarizedExperiment
 #' @import AnnotationDbi
+#' @importFrom S4Vectors SimpleList
 #' @export
 DESEGenerate <- function(DEGDatapath, SEPath){
   #### Check if SE object exists ####
@@ -967,9 +976,9 @@ AppSetup <- function(homedir){
 #' @param path The directory where the downloaded data is stored.
 #' @param DS The ProteomeExchange "PDX" numbers of the data to download.
 #' @param DownloadRawData A logical value indicating if the raw data shoud be downloaded.
-#' @import rpx
-#' @import RforProteomics
-#' @import BiocFileCache
+#' @importFrom rpx PXDataset
+#' @importFrom rpx pxget
+#' @importFrom BiocFileCache BiocFileCache
 #' @import data.table
 #' @export
 ProteomicsDataDownload <- function(path, DS, DownloadRawData = FALSE){
@@ -999,6 +1008,7 @@ ProteomicsDataDownload <- function(path, DS, DownloadRawData = FALSE){
 #'
 #' @param path The directory where the downloaded data is stored.
 #' @import data.table
+#' @importFrom makeunique make_unique
 #' @export
 FormatMaxQuant <- function(path){
   files <- gsub(".+/", "", list.dirs(path, recursive = FALSE) )
@@ -1208,7 +1218,8 @@ DesignMatrixFromNames <- function(Fpath){
 #' @param DesignDT A design table containing the dataset, column label, and the treatment condition for samples.
 #' @param Fpath The directory where the data is stored.
 #' @import data.table
-#' @import DEP
+#' @importFrom DEP make_unique
+#' @importFrom DEP make_se
 #' @export
 ProtSELoad <- function(DesignDT, Fpath){
   SEList <- list()
@@ -1230,9 +1241,9 @@ ProtSELoad <- function(DesignDT, Fpath){
 
 #' Obtain row bound data
 #'
-#' @param tissueSplitList A list of summarizedExperiment objects.
+#' @param tissueSplitList A list of SummarizedExperiment objects.
 #' @import data.table
-#' @import DEP
+#' @importFrom reshape2 melt
 #' @export
 RowDataCompile <- function(tissueSplitList){
   TotMel <- data.table()
@@ -1252,10 +1263,11 @@ RowDataCompile <- function(tissueSplitList){
 
 #' Data filtering functions
 #'
-#' @param dataSeList A list of summarizedExperiment objects.
+#' @param dataSeList A list of SummarizedExperiment objects.
 #' @param thr The number of missing values to filter by.
-#' @import data.table
-#' @import DEP
+#' @importFrom assertthat assert_that
+#' @importFrom radiant.data rownames_to_column
+#' @import SummarizedExperiment
 #' @import tidyr
 #' @import dplyr
 #' @import tidyverse
@@ -1292,10 +1304,9 @@ DataFilter <- function(dataSeList, thr = 0){
 
 #' N peptide filtering
 #'
-#' @param dataFiltList A list of summarizedExperiment objects.
+#' @param dataFiltList A list of SummarizedExperiment objects.
 #' @param Npeptides The number of peptides to filter by.
-#' @import data.table
-#' @import DEP
+#' @import SummarizedExperiment
 #' @export
 NPeptideThreshold <- function(dataFiltList, Npeptides = 2){
   PepCutOff <- dataFiltList
@@ -1309,10 +1320,10 @@ NPeptideThreshold <- function(dataFiltList, Npeptides = 2){
 
 #' Multiple normalization
 #'
-#' @param dataPepCutOff A list of summarizedExperiment objects.
-#' @import data.table
-#' @import DEP
+#' @param dataPepCutOff A list of SummarizedExperiment objects.
+#' @import SummarizedExperiment
 #' @import NormalyzerDE
+#' @importFrom DEP normalize_vsn
 #' @export
 MultiNormalization <- function(dataPepCutOff){
   #### MEAN ####
@@ -1366,9 +1377,7 @@ MultiNormalization <- function(dataPepCutOff){
 
 #' Density plots from a list
 #'
-#' @param MultiNormalizeList A list of summarizedExperiment objects.
-#' @import data.table
-#' @import DEP
+#' @param MultiNormalizeList A list of SummarizedExperiment objects.
 #' @import ggplot2
 #' @export
 densityPlotFromList <- function(MultiNormalizeList){
@@ -1387,8 +1396,8 @@ densityPlotFromList <- function(MultiNormalizeList){
 
 #' Count missing values
 #'
-#' @param data A list of summarizedExperiment objects.
-#' @import DEP
+#' @param data A list of SummarizedExperiment objects.
+#' @import SummarizedExperiment
 #' @export
 DetermineMising <- function(data){
   Missing <- NULL
@@ -1399,9 +1408,8 @@ DetermineMising <- function(data){
 
 #' Impute data
 #'
-#' @param dataFiltList A list of summarizedExperiment objects.
+#' @param dataFiltList A list of SummarizedExperiment objects.
 #' @param type Either "MinProb", "man", or "knn" indicating the type of imputation to perform.
-#' @import DEP
 #' @export
 DataImpute <- function(dataFiltList, type = "MinProb"){
   ImputeList <- list()
@@ -1421,9 +1429,11 @@ DataImpute <- function(dataFiltList, type = "MinProb"){
 
 #' Impute data
 #'
-#' @param se A list of summarizedExperiment objects.
+#' @param se A list of SummarizedExperiment objects.
 #' @param fun Either "MinProb", "man", or "knn" indicating the type of imputation to perform.
-#' @import DEP
+#' @importFrom assertthat assert_that
+#' @importFrom MSnbase exprs
+#' @import SummarizedExperiment
 #' @export
 impute2 <- function (se, fun = c("bpca", "knn", "QRILC", "MLE", "MinDet","MinProb", "man", "min", "zero", "mixed", "nbavg"), ...)  {
   assertthat::assert_that(inherits(se, "SummarizedExperiment"), is.character(fun))
@@ -1447,9 +1457,9 @@ impute2 <- function (se, fun = c("bpca", "knn", "QRILC", "MLE", "MinDet","MinPro
 
 #' Remove samples with a low count
 #'
-#' @param VarRMList A list of summarizedExperiment objects.
+#' @param VarRMList A list of SummarizedExperiment objects.
 #' @param cut The minimum cutoff for samples.
-#' @import DEP
+#' @import SummarizedExperiment
 #' @export
 LowSampleCountRmove <- function(VarRMList, cut){
   Keep <- NULL
@@ -1461,9 +1471,9 @@ LowSampleCountRmove <- function(VarRMList, cut){
 
 #' Calculate differential expression
 #'
-#' @param DataList A list of summarizedExperiment objects.
+#' @param DataList A list of SummarizedExperiment objects.
 #' @param type Either "control", "all" or "manual" indicating the differential expression analysis algorithm to use.
-#' @import DEP
+#' @importFrom DEP test_diff
 #' @export
 DEAnalysis <- function(DataList = NormImpAll, type = "manual", ComparisonList=ComparisonList){
   data_diff <- list()
@@ -1494,11 +1504,11 @@ DEAnalysis <- function(DataList = NormImpAll, type = "manual", ComparisonList=Co
     rowData(data_diff[[i]]) <- cbind(dat, adjustPvals)   }
   return(data_diff) }
 
-#' Save DEP expression summarizedExperiment objects
+#' Save DEP expression SummarizedExperiment objects
 #'
-#' @param SEList A list of summarizedExperiment objects.
+#' @param SEList A list of SummarizedExperiment objects.
 #' @param Path The path to where the data should be saved.
-#' @import DEP
+#' @import SummarizedExperiment
 #' @export
 SaveToProteomicDB <- function(SEList, Path){
   for(i in 1:length(SEList)){ saveRDS(SEList[[i]],  file.path(Path, paste(names(SEList[i]), ".rds", sep = ""))) } }
@@ -1507,7 +1517,7 @@ SaveToProteomicDB <- function(SEList, Path){
 #'
 #' @param Fname The file name of the dataset to load.
 #' @param Path The path to where the data should be saved.
-#' @import DEP
+#' @import SummarizedExperiment
 #' @export
 ProteomicSELoad <- function(Path=file.path(homedir, "Proteomic_3"), Fname=files[1]){
   SelectedList <- list()
@@ -1517,11 +1527,10 @@ ProteomicSELoad <- function(Path=file.path(homedir, "Proteomic_3"), Fname=files[
 
 #' Denote DE samples
 #'
-#' @param dataDiff A list of summarizedExperiment objects
+#' @param dataDiff A list of SummarizedExperiment objects
 #' @param alpha The significance cutoff level to use.
 #' @param lfc The log2 fold change cutoff to use.
 #' @param sigCol Either "p.val", "p.adj", or "BHCorrection" indicating the significance metric to use.
-#' @import DEP
 #' @export
 SigDEAnnotate <- function(dataDiff, alpha = 0.05, lfc = log2(2), sigCol="p.adj"){
   dep <- list()
@@ -1531,11 +1540,12 @@ SigDEAnnotate <- function(dataDiff, alpha = 0.05, lfc = log2(2), sigCol="p.adj")
 
 #' Denote DE samples
 #'
-#' @param diff A list of summarizedExperiment objects
+#' @param diff A list of SummarizedExperiment objects
 #' @param alpha The significance cutoff level to use.
 #' @param lfc The log2 fold change cutoff to use.
 #' @param sigCol Either "p.val", "p.adj", or "BHCorrection" indicating the significance metric to use.
-#' @import DEP
+#' @import SummarizedExperiment
+#' @importFrom assertthat assert_that
 #' @export
 add_rejections2 <- function (diff=dataDiff[[i]], alpha = 0.05, lfc = 1, sigCol="p.adj")  { # "p.val"
   if (is.integer(alpha)){alpha <- as.numeric(alpha)}
@@ -1571,7 +1581,7 @@ add_rejections2 <- function (diff=dataDiff[[i]], alpha = 0.05, lfc = 1, sigCol="
 
 #' Volcano plot
 #'
-#' @param DEPList A list of summarizedExperiment objects
+#' @param DEPList A list of SummarizedExperiment objects
 #' @param ComparisonList A named vector of comparisons that were made.
 #' @param ymin The minimum y axis value.
 #' @param ymax The maximum y axis value.
@@ -1580,7 +1590,6 @@ add_rejections2 <- function (diff=dataDiff[[i]], alpha = 0.05, lfc = 1, sigCol="
 #' @param addNames A logical value indicating if data point names should be added to the plot.
 #' @param Adjusted A logical value indicating if adjusted significnce values should be plotted.
 #' @param BHadjust A logical value indicating if the Benjamini–Hochberg method of adjusting p-values should be plotted.
-#' @import DEP
 #' @export
 VolcanoPlot <- function(DEPList = DEPList, ComparisonList=ComparisonList, ymin = 0, ymax = 15, xmin = -3, xmax = 3, addNames = TRUE, Adjusted = TRUE, BHadjust){
   PlotList <- list()
@@ -1597,14 +1606,16 @@ VolcanoPlot <- function(DEPList = DEPList, ComparisonList=ComparisonList, ymin =
 
 #' Volcano plot
 #'
-#' @param DEP A summarizedExperiment object
+#' @param DEP A SummarizedExperiment object
 #' @param contrast A named vector of comparisons that were made.
 #' @param label_size The size of the labels on the plot.
 #' @param add_names A logical value indicating if data point names should be added to the plot.
 #' @param adjusted A logical value indicating if adjusted significnce values should be plotted.
 #' @param BHadjusted A logical value indicating if the Benjamini–Hochberg method of adjusting p-values should be plotted.
 #' @param plot A logical value indicating if a plot should be returned.
-#' @import DEP
+#' @import SummarizedExperiment
+#' @import ggplot2
+#' @importFrom assertthat assert_that
 #' @export
 plot_volcano2 <- function (dep, contrast, label_size = 3, add_names = TRUE, adjusted = FALSE, plot = TRUE, BHadjusted) {
   if (is.integer(label_size))

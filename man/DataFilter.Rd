@@ -7,7 +7,7 @@
 DataFilter(dataSeList, thr = 0)
 }
 \arguments{
-\item{dataSeList}{A list of summarizedExperiment objects.}
+\item{dataSeList}{A list of SummarizedExperiment objects.}
 
 \item{thr}{The number of missing values to filter by.}
 }

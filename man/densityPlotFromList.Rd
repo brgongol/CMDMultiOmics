@@ -7,7 +7,7 @@
 densityPlotFromList(MultiNormalizeList)
 }
 \arguments{
-\item{MultiNormalizeList}{A list of summarizedExperiment objects.}
+\item{MultiNormalizeList}{A list of SummarizedExperiment objects.}
 }
 \description{
 Density plots from a list

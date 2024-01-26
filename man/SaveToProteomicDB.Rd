@@ -2,15 +2,15 @@
 % Please edit documentation in R/hello.R
 \name{SaveToProteomicDB}
 \alias{SaveToProteomicDB}
-\title{Save DEP expression summarizedExperiment objects}
+\title{Save DEP expression SummarizedExperiment objects}
 \usage{
 SaveToProteomicDB(SEList, Path)
 }
 \arguments{
-\item{SEList}{A list of summarizedExperiment objects.}
+\item{SEList}{A list of SummarizedExperiment objects.}
 
 \item{Path}{The path to where the data should be saved.}
 }
 \description{
-Save DEP expression summarizedExperiment objects
+Save DEP expression SummarizedExperiment objects
 }

@@ -12,7 +12,7 @@ impute2(
 )
 }
 \arguments{
-\item{se}{A list of summarizedExperiment objects.}
+\item{se}{A list of SummarizedExperiment objects.}
 
 \item{fun}{Either "MinProb", "man", or "knn" indicating the type of imputation to perform.}
 }

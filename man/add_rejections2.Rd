@@ -7,7 +7,7 @@
 add_rejections2(diff = dataDiff[[i]], alpha = 0.05, lfc = 1, sigCol = "p.adj")
 }
 \arguments{
-\item{diff}{A list of summarizedExperiment objects}
+\item{diff}{A list of SummarizedExperiment objects}
 
 \item{alpha}{The significance cutoff level to use.}
 

@@ -11,7 +11,7 @@ DEAnalysis(
 )
 }
 \arguments{
-\item{DataList}{A list of summarizedExperiment objects.}
+\item{DataList}{A list of SummarizedExperiment objects.}
 
 \item{type}{Either "control", "all" or "manual" indicating the differential expression analysis algorithm to use.}
 }

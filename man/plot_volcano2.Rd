@@ -27,7 +27,7 @@ plot_volcano2(
 
 \item{BHadjusted}{A logical value indicating if the Benjamini–Hochberg method of adjusting p-values should be plotted.}
 
-\item{DEP}{A summarizedExperiment object}
+\item{DEP}{A SummarizedExperiment object}
 }
 \description{
 Volcano plot

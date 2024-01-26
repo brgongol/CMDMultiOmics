@@ -7,7 +7,7 @@
 RowDataCompile(tissueSplitList)
 }
 \arguments{
-\item{tissueSplitList}{A list of summarizedExperiment objects.}
+\item{tissueSplitList}{A list of SummarizedExperiment objects.}
 }
 \description{
 Obtain row bound data

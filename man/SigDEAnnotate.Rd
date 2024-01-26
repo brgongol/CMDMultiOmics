@@ -7,7 +7,7 @@
 SigDEAnnotate(dataDiff, alpha = 0.05, lfc = log2(2), sigCol = "p.adj")
 }
 \arguments{
-\item{dataDiff}{A list of summarizedExperiment objects}
+\item{dataDiff}{A list of SummarizedExperiment objects}
 
 \item{alpha}{The significance cutoff level to use.}
 

@@ -7,7 +7,7 @@
 DataImpute(dataFiltList, type = "MinProb")
 }
 \arguments{
-\item{dataFiltList}{A list of summarizedExperiment objects.}
+\item{dataFiltList}{A list of SummarizedExperiment objects.}
 
 \item{type}{Either "MinProb", "man", or "knn" indicating the type of imputation to perform.}
 }
