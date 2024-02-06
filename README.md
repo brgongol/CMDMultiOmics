@@ -1,6 +1,7 @@
 # MultiOmics
 
-Step by step instructions for app installation: <br> 
+Step by step instructions for app installation. <br> 
+The following three steps should be executed in a R terminal: <br> 
 
 #### 1) Install dependencies
 install.packages(c("plotly", "shinyWidgets", "data.table", "feather", "textclean", "dplyr", "ggplot2", "RColorBrewer", "stringr" <br> 
