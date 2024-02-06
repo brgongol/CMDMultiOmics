@@ -2,15 +2,15 @@
 % Please edit documentation in R/hello.R
 \name{GenerateRawSE}
 \alias{GenerateRawSE}
-\title{Generate raw data summarized experiment object.}
+\title{GenerateRawSE}
 \usage{
-GenerateRawSE(df, ArrayDT)
+GenerateRawSE(df, ArrayDT, GTFFpath, overview)
 }
 \arguments{
-\item{df}{The meta data data frame created using the `MetDataCompile` function.}
+\item{df}{A data frame containing meta data.}
 
-\item{ArrayDT}{The Array raw data frame created using the `RawDataCompile` function}
+\item{ArrayDT}{A data table containing compiled raw data.}
 }
 \description{
-Generate raw data summarized experiment object.
+GenerateRawSE
 }

@@ -2,15 +2,17 @@
 % Please edit documentation in R/hello.R
 \name{MetDataCompile}
 \alias{MetDataCompile}
-\title{Compile all meta data into one table}
+\title{MetDataCompile}
 \usage{
-MetDataCompile(RNAseqFilePath, ArrayFilePath, overview = overview)
+MetDataCompile(RNAseqFilePath, ArrayFilePath, overview)
 }
 \arguments{
-\item{RNAseqFilePath}{The file path where the RNAseq meta data is stored.  Files should be named according to the following naming convention: "GSEXXXXX_SraRunTable.txt"}
+\item{RNAseqFilePath}{The directory where the RNAseq metadata is saved.}
 
-\item{ArrayFilePath}{The file path where the Array meta data is stored.}
+\item{ArrayFilePath}{The directory where the Array meta data is saved.}
+
+\item{overview}{A data table containing the overview information.}
 }
 \description{
-Compile all meta data into one table
+MetDataCompile
 }

@@ -8,6 +8,7 @@
 makeDirectory <- function(homedir){
   dirs <- c(homedir,
             file.path(homedir, "ArrayMetaData"),
+            file.path(homedir, "ProcessFiles"),
             file.path(homedir, "AppData"),
             file.path(homedir, "GEOcache"),
             file.path(homedir, "DirectionCheck"),
@@ -825,6 +826,104 @@ GEO2RDirectionCheck <- function(DBPath, DS, namestr, gsm, Technology, GraphPath,
   names(plotList) <- plotnames
   return(list(checkFile=checkFile, plotList = plotList)) }
 
+#' Incorporate externally analyzed data into app.
+#'
+#' @param Fpath The path to the directory where the analyzed data is stored.
+#' @param OutPath The path to the directory where the formatted data is saved.
+#' @import org.Hs.eg.db
+#' @import org.Mm.eg.db
+#' @import org.Rn.eg.db
+#' @import AnnotationDbi
+#' @export
+ExternalDataHarmonize <- function(Fpath, OutPath){
+  files <- list.files(Fpath)
+    #### DE files ####
+    ##################
+    DEfiles <- files[grepl("Rbound", files)]
+    for(a in 1:length(DEfiles)){
+      temp <- fread(file.path(Fpath, DEfiles[a]))
+      setnames(temp, c("pvalue", "FDR"), c("Pvalue", "AdjPValue"), skip_absent = TRUE)
+      comps <- unique(temp$Subset_Comparison)
+      for(b in 1:length(comps)){
+        temp2 <- temp[Subset_Comparison == comps[b],]
+        setnames(temp2, "GeneID", "ENSEMBL")
+        if(sum(grepl("ENSMUSG", temp2$ENSEMBL)) > 0 ){ # Mouse
+          symbols <- temp2$ENSEMBL
+          go <- as.data.table( suppressMessages(AnnotationDbi::select(org.Mm.eg.db, symbols, c("GENENAME"), "ENSEMBL") ))
+          temp2 <- merge(go, temp2, by = "ENSEMBL", all.y=TRUE)
+          setnames(temp2, "ENSEMBL", "ID") }
+        if(sum(grepl("ENSG", temp2$ENSEMBL)) > 0 ){ # Human
+          symbols <- temp2$ENSEMBL
+          go <- as.data.table( suppressMessages(AnnotationDbi::select(org.Hs.eg.db, symbols, c("GENENAME"), "ENSEMBL") ))
+          temp2 <- merge(go, temp2, by = "ENSEMBL", all.y=TRUE)
+          setnames(temp2, "ENSEMBL", "ID") }
+        if(sum(grepl("ENSRNOG", temp2$ENSEMBL)) > 0 ){ # Human
+          symbols <- temp2$ENSEMBL
+          go <- as.data.table( suppressMessages(AnnotationDbi::select(org.Rn.eg.db, symbols, c("GENENAME"), "ENSEMBL") ))
+          temp2 <- merge(go, temp2, by = "ENSEMBL", all.y=TRUE)
+          setnames(temp2, "ENSEMBL", "ID") }
+        #### set up file name ####
+        Fname <- unique(temp2$Subset_Comparison)
+        Fname <- paste(paste(gsub("_.+", "", DEfiles[a]), gsub("-", "_", gsub("_", "", Fname)), sep = "_"), ".txt", sep = "") # ".xls"
+        #### save file ####
+        temp2 <- temp2[,c("ID", "ENTREZID", "SYMBOL", "GENENAME", "logFC", "Pvalue", "AdjPValue"), with = FALSE]
+        # fwrite(temp2, file.path(OutPath, Fname), row.names = FALSE, quote = FALSE, sep = "\t")
+        saveRDS(temp2, file = gsub(".txt", ".rds", file.path(OutPath, Fname)) )
+      }
+      print(paste(a, "of", length(DEfiles), "DE files completed"))
+    }
+    #### FPKM Files ####
+    ####################
+    Rawfiles <- files[grepl("RPKMCodingGenes", files)]
+    for(a in 1:length(Rawfiles)){
+      temp <- fread(file.path(Fpath, Rawfiles[a]))
+      setnames(temp, "GeneID", "ENSEMBL")
+      if(sum(grepl("ENSMUSG", temp$ENSEMBL)) > 0 ){ # Mouse
+        symbols <- temp$ENSEMBL
+        go <- as.data.table( suppressMessages(AnnotationDbi::select(org.Mm.eg.db, symbols, c("ENTREZID", "SYMBOL", "GENENAME"), "ENSEMBL") ))
+        temp <- merge(go, temp, by = "ENSEMBL", all.y=TRUE)
+        setnames(temp, "ENSEMBL", "ID") }
+      if(sum(grepl("ENSG", temp$ENSEMBL)) > 0 ){ # Human
+        symbols <- temp$ENSEMBL
+        go <- as.data.table( suppressMessages(AnnotationDbi::select(org.Hs.eg.db, symbols, c("ENTREZID", "SYMBOL", "GENENAME"), "ENSEMBL") ))
+        temp <- merge(go, temp, by = "ENSEMBL", all.y=TRUE)
+        setnames(temp, "ENSEMBL", "ID") }
+      if(sum(grepl("ENSRNOG", temp$ENSEMBL)) > 0 ){ # Rat
+        symbols <- temp$ENSEMBL
+        go <- as.data.table( suppressMessages(AnnotationDbi::select(org.Rn.eg.db, symbols, c("ENTREZID", "SYMBOL", "GENENAME"), "ENSEMBL") ))
+        temp <- merge(go, temp, by = "ENSEMBL", all.y=TRUE)
+        setnames(temp, "ENSEMBL", "ID") }
+      Fname <- paste(gsub(".txt", "", Rawfiles[a]), "_RPKMRaw", ".rds", sep = "")
+      saveRDS(temp, file = gsub(".txt", ".rds", file.path(OutPath, Fname)) )
+      print(paste(a, "of", length(Rawfiles), "RPKM Raw files completed")) }
+    #### Count files ####
+    #####################
+    Rawfiles <- files[grepl("CountCodingGenes", files)]
+    for(a in 1:length(Rawfiles)){
+      temp <- fread(file.path(Fpath, Rawfiles[a]))
+      setnames(temp, "GeneID", "ENSEMBL")
+      if(sum(grepl("ENSMUSG", temp$ENSEMBL)) > 0 ){ # Mouse
+        symbols <- temp$ENSEMBL
+        go <- as.data.table( suppressMessages(AnnotationDbi::select(org.Mm.eg.db, symbols, c("ENTREZID", "SYMBOL", "GENENAME"), "ENSEMBL") ))
+        temp <- merge(go, temp, by = "ENSEMBL", all.y=TRUE)
+        setnames(temp, "ENSEMBL", "ID") }
+      if(sum(grepl("ENSG", temp$ENSEMBL)) > 0 ){ # Human
+        symbols <- temp$ENSEMBL
+        go <- as.data.table( suppressMessages(AnnotationDbi::select(org.Hs.eg.db, symbols, c("ENTREZID", "SYMBOL", "GENENAME"), "ENSEMBL") ))
+        temp <- merge(go, temp, by = "ENSEMBL", all.y=TRUE)
+        setnames(temp, "ENSEMBL", "ID") }
+      if(sum(grepl("ENSRNOG", temp$ENSEMBL)) > 0 ){ # Rat
+        symbols <- temp$ENSEMBL
+        go <- as.data.table( suppressMessages(AnnotationDbi::select(org.Rn.eg.db, symbols, c("ENTREZID", "SYMBOL", "GENENAME"), "ENSEMBL") ))
+        temp <- merge(go, temp, by = "ENSEMBL", all.y=TRUE)
+        setnames(temp, "ENSEMBL", "ID") }
+      Fname <- paste(gsub(".txt", "", Rawfiles[a]), "_CountRaw", ".rds", sep = "")
+      saveRDS(temp, file = gsub(".txt", ".rds", file.path(OutPath, Fname)) )
+      print(paste(a, "of", length(Rawfiles), "Count Raw files completed")) }
+}
+
+
+
 #' Create a summarized experiment object that integrates all DEG data.
 #'
 #' @param DEGDatapath The path to the directory where the fold change data are stored.
@@ -1275,6 +1374,9 @@ ProtSELoad <- function(DesignDT, Fpath){
     }
     experimental_design <- DesignDT[DesignDT$dataset == gsub(".xls", "", files[i]),]
     experimental_design$dataset <- NULL
+    for(a in 1:length(LFQ_columns)){
+    data_unique[[LFQ_columns[a]]] <- suppressWarnings(as.numeric(data_unique[[LFQ_columns[a]]]))
+    }
     data_se <- make_se(as.data.frame(data_unique), LFQ_columns, as.data.frame(experimental_design))
     SEList[[i]] <- data_se
     names(SEList)[i] <- gsub(".xls", "", files[i])
@@ -1710,3 +1812,679 @@ plot_volcano2 <- function (dep, contrast, label_size = 3, add_names = TRUE, adju
     if (adjusted) { colnames(df)[3] <- "adjusted_p_value_-log10" }
     if (BHadjusted) { colnames(df)[3] <- "BH_adjusted_p_value_-log10" }
     return(df) } }
+
+#' ProteomicProteinName
+#'
+#' @param fPath The directory where the proteomic datasets are stored
+#' @import SummarizedExperiment
+#' @export
+ProteomicProteinName <- function(fPath){
+  ProtDatasetSelection <- list.files(fPath)
+  ProteomicNames <- NULL
+  for(i in 1:length(ProtDatasetSelection)){
+    ProteomicNames <- unique( c(ProteomicNames, row.names(rowData(readRDS(file.path(fPath, ProtDatasetSelection[i]))))))
+  }
+  ProteomicNames <- ProteomicNames[order(ProteomicNames)]
+  return(ProteomicNames)
+}
+
+
+
+#################################################################
+#### Function that combines all raw data into one data table ####
+#################################################################
+#' RawDataCompile
+#'
+#' @param Fpath The directory where raw tables are stored.
+#' @param outPath The directory where the compiled table should be saved
+#' @param StartAt Indicates the file number to start combining data from.
+#' @param sleep The amount of time to pause between incorporating the next dataset. Only needed if using a machine that syncronizes the file to the cloud.
+#' @param DataType Either "Array", "RNAseqRPKM", or "RNAseqCount" indicating the type of data that is incorporated.
+#' @import data.table
+#' @import org.Hs.eg.db
+#' @import org.Mm.eg.db
+#' @export
+RawDataCompile <- function(Fpath = file.path(homedir, "AppData"), outPath = file.path("./6_ProcessFiles/RawData.txt"), StartAt = 1, sleep = 20, DataType = "Array"){
+  if(DataType == "Array"){
+    tryCatch({ RawArrayComplete <- as.data.frame(fread(outPath)) #RawArrayComplete <- read_feather(outPath)# as.data.table()
+    }, warning = function(w) {print("Raw Database file not found. Compiling from scratch"); Scratch <<- TRUE
+    }, error = function(e) {    print("Raw Database file not found. Compiling from scratch"); Scratch <<- TRUE  })
+    if(exists("RawArrayComplete")){ print("Updating Raw Database. Data will be ignored for duplicated column names with identical data."); Scratch <- FALSE }
+    if(Scratch){
+      #### map Human annotation information to gene names ####
+      x<-org.Hs.egSYMBOL; symbols<-mappedkeys(x)
+      goHuman <- as.data.table( suppressMessages(AnnotationDbi::select(org.Hs.eg.db, symbols, c("SYMBOL"), "ENTREZID" ) ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Human", sep = ""))) # , "ENSEMBL"
+      goHuman <- goHuman[!is.na(goHuman$SYMBOL),]
+      #### map Mouse annotation information to gene names ####
+      x<-org.Mm.egSYMBOL; symbols<-mappedkeys(x)
+      goMouse <- as.data.table( suppressMessages(AnnotationDbi::select(org.Mm.eg.db, symbols, c("SYMBOL") , "ENTREZID") ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Mouse", sep = ""))) #, "ENSEMBL"
+      goMouse <- goMouse[!is.na(goMouse$SYMBOL),]
+      # #### map Rat annotation information to gene names ####
+      # x<-org.Rn.egSYMBOL; symbols<-mappedkeys(x)
+      # goRat <- as.data.table( select(org.Rn.eg.db, symbols, c("SYMBOL"), "ENTREZID") ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Rat", sep = "")))
+      # goRat <- goRat[!is.na(goRat$ENTREZID),]
+      #### set up rowData information ####
+      ####################################
+      print("formatting rowData information.")
+      goMouse$SYMBOL <- toupper(goMouse$SYMBOL)
+      goHuman$SYMBOL <- toupper(goHuman$SYMBOL)
+      mer <- merge(goHuman, goMouse, by = "SYMBOL", all = TRUE)
+      mer <- mer[!grepl("RIK$", mer$SYMBOL),]
+      mer <- mer[!grepl("RIK[0-9]$", mer$SYMBOL),]
+      mer <- mer[!grepl("---", mer$SYMBOL),]
+      mer <- mer[!grepl("1-DEC", mer$SYMBOL),]
+      mer <- mer[!grepl("1-MAR", mer$SYMBOL),]
+      #### remove duplicated records ####
+      dups <- unique(mer[duplicated(mer$SYMBOL),]$SYMBOL)
+      dupRMDT <- data.table()
+      for(i in 1:length(dups)){
+        temp <- mer[mer$SYMBOL == dups[i],]
+        if(nrow(temp[complete.cases(temp)]) == 0){
+          df <- as.data.frame(is.na(as.matrix(temp[,2:3, with = FALSE])))
+          FAL <- apply(df, 1, sum)
+          if(sum(FAL == 2) == 4){ temp <- temp[1,]
+          } else { temp <- unique(temp[FAL ==1,]) }
+          dupRMDT <- rbind(dupRMDT, temp)
+        } else { dupRMDT <- rbind(dupRMDT, temp[complete.cases(temp),]) }
+      }
+      #### Combine duplicated records with non-duplicated records ####
+      dupRMDT <- dupRMDT[!duplicated(dupRMDT$SYMBOL),]
+      mer2 <- mer[!(mer$SYMBOL %in% dupRMDT$SYMBOL),]
+      mer2 <- rbind(mer2, dupRMDT)
+      #### format SummarizedExperiment rowData data frame ####
+      rowData <- as.data.frame(mer2)
+      row.names(rowData) <- rowData$SYMBOL
+      rowData <- rowData[order(rownames(rowData), decreasing = FALSE),]
+    }
+    #### Loop through files and incorporate them into the raw data master file ####
+    files <- list.files(Fpath)
+    files <- files[grepl(".rds", files) & grepl("_Raw", files)]
+    files <- files[StartAt:length(files)]
+    for(i in 1:length(files)){
+      one <- as.data.table(readRDS(file.path(Fpath, files[i])))
+      one <- one[,!c("ID", "GENENAME"), with = FALSE]
+      one <- one[!is.na(SYMBOL),][!is.na(ENTREZID),]
+      one$SYMBOL <- toupper(one$SYMBOL)
+      ### remove duplicated genes ####
+      # #### data table method ####
+      # names <- one[, c("ENTREZID", "SYMBOL"), with = FALSE]
+      # names <- names[!duplicated(ENTREZID),]
+      # df2 <- one[ ,lapply(.SD, mean), by = ENTREZID, .SDcols = 3:ncol(one)]
+      # d <- merge(names, df2, by = "ENTREZID", all.y = TRUE)
+      # d[ENTREZID == dups[b],]
+      # #### looping case ####
+      # dups <- one[duplicated(one$ENTREZID),]$ENTREZID
+      # if(length(dups) > 0){
+      #   for(b in 1:length(dups)){
+      #     temp <- one[ENTREZID == dups[b],]
+      #     sym <- temp$SYMBOL[1]
+      #     mea <- apply(temp[,!(colnames(temp) %in% c("ENTREZID","SYMBOL")), with = FALSE], 2, function(x){mean(x, na.rm = TRUE)})
+      #     dt <- t(data.table(mea))
+      #     colnames(dt) <- names(mea)
+      #     dt <- as.data.table(dt)
+      #     dt$ENTREZID <- dups[b]
+      #     dt$SYMBOL <- sym
+      #     #### update table ####
+      #     one <- one[!ENTREZID == dups[b],]
+      #     one <- rbind(one, dt) }
+      # }
+      #### sanity check ####
+      # one <- one[order(ENTREZID),]
+      # d <- d[order(ENTREZID),]
+      # identical(one$ENTREZID, d$ENTREZID)
+      # identical(one$SYMBOL, d$SYMBOL)
+      # identical(one$GSE103682_GSM2779145, d$GSE103682_GSM2779145)
+      # n <- t(one[one$GSE103682_GSM2779145 == setdiff(one$GSE103682_GSM2779145, d$GSE103682_GSM2779145)[1],])
+      # m <- t(d[ENTREZID == "23",])
+      # n <- apply(one[, 3:ncol(one), with = FALSE], 1, sum)
+      # m <- apply(d[, 3:ncol(d), with = FALSE], 1, sum)
+      # sum(n == m) == nrow(one)
+      # n[!n == m]
+      # m[!n == m]
+      # one[!n == m,][1,]
+      # d[!n == m,][1,]
+      # n <- apply(one[, 3:ncol(one), with = FALSE], 2, sum)
+      # m <- apply(d[, 3:ncol(d), with = FALSE], 2, sum)
+      # sum(n == m) == (ncol(one)-2)
+
+      # dups <- one[duplicated(one$SYMBOL),]$SYMBOL
+      # if(length(dups) > 0){
+      #   for(b in 1:length(dups)){
+      #     temp <- one[SYMBOL == dups[b],]
+      #     sym <- temp$ENTREZID[1]
+      #     mea <- apply(temp[,!(colnames(temp) %in% c("ENTREZID","SYMBOL")), with = FALSE], 2, function(x){mean(x, na.rm = TRUE)})
+      #     dt <- t(data.table(mea))
+      #     colnames(dt) <- names(mea)
+      #     dt <- as.data.table(dt)
+      #     dt$SYMBOL <- dups[b]
+      #     dt$ENTREZID <- sym
+      #     #### update table ####
+      #     one <- one[!SYMBOL == dups[b],]
+      #     one <- rbind(one, dt) }
+      # }
+
+      #### data table method ####
+      names <- one[, c("ENTREZID", "SYMBOL"), with = FALSE]
+      names <- names[!duplicated(ENTREZID),]
+      df2 <- one[ ,lapply(.SD, mean), by = ENTREZID, .SDcols = 3:ncol(one)]
+      one <- merge(names, df2, by = "ENTREZID", all.y = TRUE)
+
+      if(!exists("RawArrayComplete")){
+        if(sum(rowData$ENTREZID_Human %in% one$ENTREZID) > 150){
+          RawArrayComplete <- merge(rowData, one[,!c("SYMBOL"), with = FALSE], by.x = "ENTREZID_Human", by.y = "ENTREZID", all.x = TRUE)
+          # RawArrayComplete <- merge(rowData, one[,!c("ENTREZID"), with = FALSE], by = "SYMBOL", all.x = TRUE)
+        }
+        if(sum(rowData$ENTREZID_Mouse %in% one$ENTREZID) > 150){
+          RawArrayComplete <- merge(rowData, one[,!c("SYMBOL"), with = FALSE], by.x = "ENTREZID_Mouse", by.y = "ENTREZID", all.x = TRUE)
+          # RawArrayComplete <- merge(rowData, one[,!c("ENTREZID"), with = FALSE], by = "SYMBOL", all.x = TRUE)
+        }
+      } else {
+        ##### systematically check to see if data in duplicated columns are identical ####
+        for(c in 1:20){
+          if(ncol(one) > 1){
+            intColNames <- intersect(colnames(one), colnames(RawArrayComplete)); intColNames <- intColNames[!(intColNames %in% c("ENTREZID", "SYMBOL"))]
+            if(length(intColNames) > 0){
+              for(b in 1:length(intColNames)){
+                t1 <- one[,c(intColNames[b], "SYMBOL"), with = FALSE]
+                t2 <- RawArrayComplete[,c(intColNames[b], "SYMBOL")]
+                t2 <- t2[!is.na(t2[[intColNames[b]]]),]
+                mer <- merge(t1, t2, by = "SYMBOL")
+                if(cor(mer[[2]], mer[[3]], use="complete.obs") < 0.95 ){
+                  print(paste("Data for column name:", intColNames[b], "is not identical for", files[i], i, sep = " "))
+                  setnames(one, intColNames[b], paste(intColNames[b], ".99", sep = "")) #### update names ####
+                } }
+              one <- one[,!(colnames(one) %in% intColNames), with = FALSE]
+            } } }
+        if(!ncol(one) > 2){ one <- data.table() }
+        if(ncol(one) > 0){
+          if(sum(RawArrayComplete$ENTREZID_Human %in% one$ENTREZID) > 150){
+            RawArrayComplete <- merge(RawArrayComplete, one[,!c("SYMBOL"), with = FALSE], by.x = "ENTREZID_Human", by.y = "ENTREZID", all.x = TRUE)
+          }
+          if(sum(RawArrayComplete$ENTREZID_Mouse %in% one$ENTREZID) > 150){
+            RawArrayComplete <- merge(RawArrayComplete, one[,!c("SYMBOL"), with = FALSE], by.x = "ENTREZID_Mouse", by.y = "ENTREZID", all.x = TRUE)
+          } }
+      }
+      print(paste("incorporated", i, "of", length(files), sep = " "))
+      fwrite(RawArrayComplete, gsub("feather", "txt", outPath), row.names = FALSE, quote = FALSE, sep = "\t")
+      Sys.sleep(sleep)
+    }
+    print("Raw data updated")
+    # return(RawArrayComplete)
+  }
+  if(DataType == "RNAseqRPKM"){
+    tryCatch({ RawRPKMComplete <- as.data.frame(fread(outPath))#<- read_feather(outPath)
+    }, warning = function(w) {print("Raw Database file not found. Compiling from scratch"); ScratchRPKM <<- TRUE
+    }, error = function(e) {    print("Raw Database file not found. Compiling from scratch"); ScratchRPKM <<- TRUE  })
+    if(exists("RawRPKMComplete")){ print("Updating Raw Database. Data will be ignored for duplicated column names with identical data."); ScratchRPKM <- FALSE }
+    if(ScratchRPKM){
+      #### map Human annotation information to gene names ####
+      x<-org.Hs.egSYMBOL; symbols<-mappedkeys(x)
+      goHuman <- as.data.table( suppressMessages(AnnotationDbi::select(org.Hs.eg.db, symbols, c("SYMBOL"), "ENTREZID" ) ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Human", sep = ""))) # , "ENSEMBL"
+      goHuman <- goHuman[!is.na(goHuman$SYMBOL),]
+      #### map Mouse annotation information to gene names ####
+      x<-org.Mm.egSYMBOL; symbols<-mappedkeys(x)
+      goMouse <- as.data.table( suppressMessages(AnnotationDbi::select(org.Mm.eg.db, symbols, c("SYMBOL") , "ENTREZID") ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Mouse", sep = ""))) #, "ENSEMBL"
+      goMouse <- goMouse[!is.na(goMouse$SYMBOL),]
+      # #### map Rat annotation information to gene names ####
+      # x<-org.Rn.egSYMBOL; symbols<-mappedkeys(x)
+      # goRat <- as.data.table( select(org.Rn.eg.db, symbols, c("SYMBOL"), "ENTREZID") ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Rat", sep = "")))
+      # goRat <- goRat[!is.na(goRat$ENTREZID),]
+      #### set up rowData information ####
+      ####################################
+      print("formatting rowData information.")
+      goMouse$SYMBOL <- toupper(goMouse$SYMBOL)
+      goHuman$SYMBOL <- toupper(goHuman$SYMBOL)
+      mer <- merge(goHuman, goMouse, by = "SYMBOL", all = TRUE)
+      mer <- mer[!grepl("RIK$", mer$SYMBOL),]
+      mer <- mer[!grepl("RIK[0-9]$", mer$SYMBOL),]
+      mer <- mer[!grepl("---", mer$SYMBOL),]
+      mer <- mer[!grepl("1-DEC", mer$SYMBOL),]
+      mer <- mer[!grepl("1-MAR", mer$SYMBOL),]
+      #### remove duplicated records ####
+      dups <- unique(mer[duplicated(mer$SYMBOL),]$SYMBOL)
+      dupRMDT <- data.table()
+      for(i in 1:length(dups)){
+        temp <- mer[mer$SYMBOL == dups[i],]
+        if(nrow(temp[complete.cases(temp)]) == 0){
+          df <- as.data.frame(is.na(as.matrix(temp[,2:3, with = FALSE])))
+          FAL <- apply(df, 1, sum)
+          if(sum(FAL == 2) == 4){ temp <- temp[1,]
+          } else { temp <- unique(temp[FAL ==1,]) }
+          dupRMDT <- rbind(dupRMDT, temp)
+        } else { dupRMDT <- rbind(dupRMDT, temp[complete.cases(temp),]) }
+      }
+      #### Combine duplicated records with non-duplicated records ####
+      dupRMDT <- dupRMDT[!duplicated(dupRMDT$SYMBOL),]
+      mer2 <- mer[!(mer$SYMBOL %in% dupRMDT$SYMBOL),]
+      mer2 <- rbind(mer2, dupRMDT)
+      #### format SummarizedExperiment rowData data frame ####
+      rowData <- as.data.frame(mer2)
+      row.names(rowData) <- rowData$SYMBOL
+      rowData <- rowData[order(rownames(rowData), decreasing = FALSE),]
+    }
+    #### Loop through files and incorporate them into the raw data master file ####
+    files <- list.files(Fpath)
+    files <- files[grepl(".rds", files) & grepl("_RPKMRaw", files)]
+    files <- files[StartAt:length(files)]
+    for(i in 1:length(files)){
+      one <- as.data.table(readRDS(file.path(Fpath, files[i])))
+      one <- one[,!c("ID", "GENENAME"), with = FALSE]
+      one <- one[!is.na(SYMBOL),][!is.na(ENTREZID),]
+      one$SYMBOL <- toupper(one$SYMBOL)
+      setnames(one, colnames(one)[!colnames(one) %in% c("ENTREZID", "SYMBOL")], paste(gsub("_.+", "", files[i]), colnames(one)[!colnames(one) %in% c("ENTREZID", "SYMBOL")], sep = "_"))
+      #### remove duplicated genes ####
+      # dups <- one[duplicated(one$ENTREZID),]$ENTREZID
+      # if(length(dups) > 0){
+      #   for(b in 1:length(dups)){
+      #     temp <- one[ENTREZID == dups[b],]
+      #     sym <- temp$SYMBOL[1]
+      #     mea <- apply(temp[,!(colnames(temp) %in% c("ENTREZID","SYMBOL")), with = FALSE], 2, function(x){mean(x, na.rm = TRUE)})
+      #     dt <- t(data.table(mea))
+      #     colnames(dt) <- names(mea)
+      #     dt <- as.data.table(dt)
+      #     dt$ENTREZID <- dups[b]
+      #     dt$SYMBOL <- sym
+      #     #### update table ####
+      #     one <- one[!ENTREZID == dups[b],]
+      #     one <- rbind(one, dt) }
+      # }
+      #### data table method ####
+      names <- one[, c("ENTREZID", "SYMBOL"), with = FALSE]
+      names <- names[!duplicated(ENTREZID),]
+      df2 <- one[ ,lapply(.SD, mean), by = ENTREZID, .SDcols = 3:ncol(one)]
+      one <- merge(names, df2, by = "ENTREZID", all.y = TRUE)
+
+      if(!exists("RawRPKMComplete")){
+        if(sum(rowData$ENTREZID_Human %in% one$ENTREZID) > 150){
+          RawRPKMComplete <- merge(rowData, one[,!c("SYMBOL"), with = FALSE], by.x = "ENTREZID_Human", by.y = "ENTREZID", all.x = TRUE)
+        }
+        if(sum(rowData$ENTREZID_Mouse %in% one$ENTREZID) > 150){
+          RawRPKMComplete <- merge(rowData, one[,!c("SYMBOL"), with = FALSE], by.x = "ENTREZID_Mouse", by.y = "ENTREZID", all.x = TRUE)
+        }
+      } else {
+        ##### systematically check to see if data in duplicated columns are identical ####
+        for(c in 1:20){
+          if(ncol(one) > 1){
+            intColNames <- intersect(colnames(one), colnames(RawRPKMComplete)); intColNames <- intColNames[!(intColNames %in% c("ENTREZID", "SYMBOL"))]
+            if(length(intColNames) > 0){
+              for(b in 1:length(intColNames)){
+                t1 <- one[,c(intColNames[b], "SYMBOL"), with = FALSE]
+                t2 <- RawRPKMComplete[,c(intColNames[b], "SYMBOL")]
+                t2 <- t2[!is.na(t2[[intColNames[b]]]),]
+                mer <- merge(t1, t2, by = "SYMBOL")
+                if(cor(mer[[2]], mer[[3]], use="complete.obs") < 0.95 ){
+                  print(paste("Data for column name:", intColNames[b], "is not identical for", files[i], i, sep = " "))
+                  setnames(one, intColNames[b], paste(intColNames[b], ".99", sep = "")) #### update names ####
+                } }
+              one <- one[,!(colnames(one) %in% intColNames), with = FALSE]
+            } } }
+        if(!ncol(one) > 2){ one <- data.table() }
+        if(ncol(one) > 0){
+          if(sum(RawRPKMComplete$ENTREZID_Human %in% one$ENTREZID) > 150){
+            RawRPKMComplete <- merge(RawRPKMComplete, one[,!c("SYMBOL"), with = FALSE], by.x = "ENTREZID_Human", by.y = "ENTREZID", all.x = TRUE)
+          }
+          if(sum(RawRPKMComplete$ENTREZID_Mouse %in% one$ENTREZID) > 150){
+            RawRPKMComplete <- merge(RawRPKMComplete, one[,!c("SYMBOL"), with = FALSE], by.x = "ENTREZID_Mouse", by.y = "ENTREZID", all.x = TRUE)
+          } }
+      }
+      print(paste("incorporated", i, "of", length(files), sep = " "))
+      fwrite(RawRPKMComplete, gsub("feather", "txt", outPath), row.names = FALSE, quote = FALSE, sep = "\t")
+      Sys.sleep(sleep)
+    }
+    print("RPKM data updated")
+    # return(RawRPKMComplete)
+  }
+  if(DataType == "RNAseqCount"){
+    tryCatch({ RawCountComplete <- as.data.frame(fread(outPath))#<- read_feather(outPath)
+    }, warning = function(w) {print("Raw Database file not found. Compiling from scratch"); ScratchCount <<- TRUE
+    }, error = function(e) {    print("Raw Database file not found. Compiling from scratch"); ScratchCount <<- TRUE  })
+    if(exists("RawCountComplete")){ print("Updating Raw Database. Data will be ignored for duplicated column names with identical data."); ScratchCount <- FALSE }
+    if(ScratchCount){
+      #### map Human annotation information to gene names ####
+      x<-org.Hs.egSYMBOL; symbols<-mappedkeys(x)
+      goHuman <- as.data.table( suppressMessages(AnnotationDbi::select(org.Hs.eg.db, symbols, c("SYMBOL"), "ENTREZID" ) ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Human", sep = ""))) # , "ENSEMBL"
+      goHuman <- goHuman[!is.na(goHuman$SYMBOL),]
+      #### map Mouse annotation information to gene names ####
+      x<-org.Mm.egSYMBOL; symbols<-mappedkeys(x)
+      goMouse <- as.data.table( suppressMessages(AnnotationDbi::select(org.Mm.eg.db, symbols, c("SYMBOL") , "ENTREZID") ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Mouse", sep = ""))) #, "ENSEMBL"
+      goMouse <- goMouse[!is.na(goMouse$SYMBOL),]
+      # #### map Rat annotation information to gene names ####
+      # x<-org.Rn.egSYMBOL; symbols<-mappedkeys(x)
+      # goRat <- as.data.table( select(org.Rn.eg.db, symbols, c("SYMBOL"), "ENTREZID") ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Rat", sep = "")))
+      # goRat <- goRat[!is.na(goRat$ENTREZID),]
+      #### set up rowData information ####
+      ####################################
+      print("formatting rowData information.")
+      goMouse$SYMBOL <- toupper(goMouse$SYMBOL)
+      goHuman$SYMBOL <- toupper(goHuman$SYMBOL)
+      mer <- merge(goHuman, goMouse, by = "SYMBOL", all = TRUE)
+      mer <- mer[!grepl("RIK$", mer$SYMBOL),]
+      mer <- mer[!grepl("RIK[0-9]$", mer$SYMBOL),]
+      mer <- mer[!grepl("---", mer$SYMBOL),]
+      mer <- mer[!grepl("1-DEC", mer$SYMBOL),]
+      mer <- mer[!grepl("1-MAR", mer$SYMBOL),]
+      #### remove duplicated records ####
+      dups <- unique(mer[duplicated(mer$SYMBOL),]$SYMBOL)
+      dupRMDT <- data.table()
+      for(i in 1:length(dups)){
+        temp <- mer[mer$SYMBOL == dups[i],]
+        if(nrow(temp[complete.cases(temp)]) == 0){
+          df <- as.data.frame(is.na(as.matrix(temp[,2:3, with = FALSE])))
+          FAL <- apply(df, 1, sum)
+          if(sum(FAL == 2) == 4){ temp <- temp[1,]
+          } else { temp <- unique(temp[FAL ==1,]) }
+          dupRMDT <- rbind(dupRMDT, temp)
+        } else { dupRMDT <- rbind(dupRMDT, temp[complete.cases(temp),]) }
+      }
+      #### Combine duplicated records with non-duplicated records ####
+      dupRMDT <- dupRMDT[!duplicated(dupRMDT$SYMBOL),]
+      mer2 <- mer[!(mer$SYMBOL %in% dupRMDT$SYMBOL),]
+      mer2 <- rbind(mer2, dupRMDT)
+      #### format SummarizedExperiment rowData data frame ####
+      rowData <- as.data.frame(mer2)
+      row.names(rowData) <- rowData$SYMBOL
+      rowData <- rowData[order(rownames(rowData), decreasing = FALSE),]
+    }
+    #### Loop through files and incorporate them into the raw data master file ####
+    files <- list.files(Fpath)
+    files <- files[grepl(".rds", files) & grepl("_CountRaw", files)]
+    files <- files[StartAt:length(files)]
+    for(i in 1:length(files)){
+      one <- as.data.table(readRDS(file.path(Fpath, files[i])))
+      one <- one[,!c("ID", "GENENAME"), with = FALSE]
+      one <- one[!is.na(SYMBOL),][!is.na(ENTREZID),]
+      one$SYMBOL <- toupper(one$SYMBOL)
+      setnames(one, colnames(one)[!colnames(one) %in% c("ENTREZID", "SYMBOL")], paste(gsub("_.+", "", files[i]), colnames(one)[!colnames(one) %in% c("ENTREZID", "SYMBOL")], sep = "_"))
+      #### remove duplicated genes ####
+      # dups <- one[duplicated(one$ENTREZID),]$ENTREZID
+      # if(length(dups) > 0){
+      #   for(b in 1:length(dups)){
+      #     temp <- one[ENTREZID == dups[b],]
+      #     sym <- temp$SYMBOL[1]
+      #     mea <- apply(temp[,!(colnames(temp) %in% c("ENTREZID","SYMBOL")), with = FALSE], 2, function(x){mean(x, na.rm = TRUE)})
+      #     dt <- t(data.table(mea))
+      #     colnames(dt) <- names(mea)
+      #     dt <- as.data.table(dt)
+      #     dt$ENTREZID <- dups[b]
+      #     dt$SYMBOL <- sym
+      #     #### update table ####
+      #     one <- one[!ENTREZID == dups[b],]
+      #     one <- rbind(one, dt) }
+      # }
+      #### data table method ####
+      names <- one[, c("ENTREZID", "SYMBOL"), with = FALSE]
+      names <- names[!duplicated(ENTREZID),]
+      df2 <- one[ ,lapply(.SD, mean), by = ENTREZID, .SDcols = 3:ncol(one)]
+      one <- merge(names, df2, by = "ENTREZID", all.y = TRUE)
+
+      if(!exists("RawCountComplete")){
+        if(sum(rowData$ENTREZID_Human %in% one$ENTREZID) > 150){
+          RawCountComplete <- merge(rowData, one[,!c("SYMBOL"), with = FALSE], by.x = "ENTREZID_Human", by.y = "ENTREZID", all.x = TRUE)
+        }
+        if(sum(rowData$ENTREZID_Mouse %in% one$ENTREZID) > 150){
+          RawCountComplete <- merge(rowData, one[,!c("SYMBOL"), with = FALSE], by.x = "ENTREZID_Mouse", by.y = "ENTREZID", all.x = TRUE)
+        }
+      } else {
+        ##### systematically check to see if data in duplicated columns are identical ####
+        for(c in 1:20){
+          if(ncol(one) > 1){
+            intColNames <- intersect(colnames(one), colnames(RawCountComplete)); intColNames <- intColNames[!(intColNames %in% c("ENTREZID", "SYMBOL"))]
+            if(length(intColNames) > 0){
+              for(b in 1:length(intColNames)){
+                t1 <- one[,c(intColNames[b], "SYMBOL"), with = FALSE]
+                t2 <- RawCountComplete[,c(intColNames[b], "SYMBOL")]
+                t2 <- t2[!is.na(t2[[intColNames[b]]]),]
+                mer <- merge(t1, t2, by = "SYMBOL")
+                if(cor(mer[[2]], mer[[3]], use="complete.obs") < 0.95 ){
+                  print(paste("Data for column name:", intColNames[b], "is not identical for", files[i], i, sep = " "))
+                  setnames(one, intColNames[b], paste(intColNames[b], ".99", sep = "")) #### update names ####
+                } }
+              one <- one[,!(colnames(one) %in% intColNames), with = FALSE]
+            } } }
+        if(!ncol(one) > 2){ one <- data.table() }
+        if(ncol(one) > 0){
+          if(sum(RawCountComplete$ENTREZID_Human %in% one$ENTREZID) > 150){
+            RawCountComplete <- merge(RawCountComplete, one[,!c("SYMBOL"), with = FALSE], by.x = "ENTREZID_Human", by.y = "ENTREZID", all.x = TRUE)
+          }
+          if(sum(RawCountComplete$ENTREZID_Mouse %in% one$ENTREZID) > 150){
+            RawCountComplete <- merge(RawCountComplete, one[,!c("SYMBOL"), with = FALSE], by.x = "ENTREZID_Mouse", by.y = "ENTREZID", all.x = TRUE)
+          } }
+      }
+      print(paste("incorporated", i, "of", length(files), sep = " "))
+      fwrite(RawCountComplete, gsub("feather", "txt", outPath), row.names = FALSE, quote = FALSE, sep = "\t")
+      Sys.sleep(sleep)
+    }
+    print("Count data updated")
+    # return(RawCountComplete)
+  }
+}
+
+#############################################################
+#### Function that compiles all meta data into one table ####
+#############################################################
+#' MetDataCompile
+#'
+#' @param RNAseqFilePath The directory where the RNAseq metadata is saved.
+#' @param ArrayFilePath The directory where the Array meta data is saved.
+#' @param overview A data table containing the overview information.
+#' @import data.table
+#' @export
+MetDataCompile <- function(RNAseqFilePath, ArrayFilePath, overview){
+  #### RNAseq data ####
+  files <- list.files(RNAseqFilePath)
+  files <- file.path(RNAseqFilePath, files)
+  dt1 <- data.table()
+  for(i in 1:length(files)){
+    t <- fread(files[i]);
+    t$Dataset <- gsub(".+/|_.+", "", files[i])
+    t$RawColumnNames <- paste(t$Dataset, t$`Sample Name`, sep = "_")
+    dt1 <- rbind(dt1, t, fill = TRUE)}
+  dt1 <- dt1[`Assay Type` == "RNA-Seq",]
+  #### Array data ####
+  files <- list.files(ArrayFilePath)
+  files <- file.path(ArrayFilePath, files)
+  dt2 <- data.table()
+  for(i in 1:length(files)){
+    # t <- fread(files[i]);
+    t <- readRDS(files[i]);
+    t$Dataset <- gsub(".+/|_.+", "", files[i])
+    t$RawColumnNames <- paste(t$Dataset, t$geo_accession, sep = "_")
+    dt2 <- rbind(dt2, t, fill = TRUE)}
+  dt2 <- as.data.table(dt2)
+  dt2$`Assay Type` <- "Array"
+  #### Combine together ####
+  dt <- rbind(dt1, dt2, fill = TRUE)
+  #### clean up column names ####
+  cname <- colnames(dt)
+  cname <- gsub(":.+", "", cname)
+  cname <- gsub("erythrocyte  eicosapentaenoic acid (% of total lipids)", "erythrocyte  eicosapentaenoic acid % of total lipids", cname, fixed = TRUE)
+  cname <- gsub("erythrocyte arachidonic acid (% of total lipids)", "erythrocyte arachidonic acid % of total lipids", cname, fixed = TRUE)
+  cname <- gsub("erythrocyte docosahexaenoic acid (% of total lipids)", "erythrocyte docosahexaenoic acid % of total lipids", cname, fixed = TRUE)
+  cname <- gsub("liver arachidonic acid (% of diacylglycerols)", "liver arachidonic acid % of diacylglycerols", cname, fixed = TRUE)
+  cname <- gsub("liver arachidonic acid (% of phospholipids)", "liver arachidonic acid % of phospholipids", cname, fixed = TRUE)
+  cname <- gsub("liver arachidonic acid (% of triacylglycerols)", "liver arachidonic acid % of triacylglycerols", cname, fixed = TRUE)
+  cname <- gsub("liver docosahexaenoic acid (% of diacylglycerols)", "liver docosahexaenoic acid % of diacylglycerols", cname, fixed = TRUE)
+  cname <- gsub("liver docosahexaenoic acid (% of phospholipids)", "liver docosahexaenoic acid % of phospholipids", cname, fixed = TRUE)
+  cname <- gsub("liver docosahexaenoic acid (% of triacylglycerols)", "liver docosahexaenoic acid % of triacylglycerols", cname, fixed = TRUE)
+  cname <- gsub("liver eicosapentaenoic acid (% of diacylglycerols)", "liver eicosapentaenoic acid % of diacylglycerols", cname, fixed = TRUE)
+  cname <- gsub("liver eicosapentaenoic acid (% of phospholipids)", "liver eicosapentaenoic acid % of phospholipids", cname, fixed = TRUE)
+  cname <- gsub("liver eicosapentaenoic acid (% of triacylglycerols)", "liver eicosapentaenoic acid % of triacylglycerols", cname, fixed = TRUE)
+  cname <- gsub(" \\(.+\\)", "", cname)
+  cname <- gsub("\\..+", "", cname)
+  cname <- tolower(cname)
+  setnames(dt, colnames(dt), cname)
+  dt <- dt[,!colnames(dt) %in% c("characteristics_ch1"), with = FALSE,]
+  #### merge duplicated column names into one column ####
+  cdups <- unique(colnames(dt)[duplicated(colnames(dt))])
+  for(a in 1:length(cdups)){
+    #### remove duplicated column names ####
+    MerAtrribute <- NULL
+    temp <- dt[,colnames(dt) %in% cdups[a], with = FALSE]
+    for(i in 1:nrow(temp)){
+      rec <- NULL
+      for(b in 1:ncol(temp[i,])){
+        rec <- c(rec, temp[i,][[b]])#, temp[i,][[2]])
+      }
+      if(sum(is.na(rec)) == length(rec)){
+        MerAtrribute[i] <- NA
+      } else {
+        MerAtrribute[i] <- paste(rec[!is.na(rec)], collapse = " / ")
+      }
+    }
+    dt <- dt[,!colnames(dt) %in% cdups[a], with = FALSE]
+    dt[[cdups[a]]] <- MerAtrribute
+    setnames(dt, colnames(dt), gsub("\\..+", "", colnames(dt)))
+  }
+  dt <- dt[!duplicated(rawcolumnnames),]
+  df <- as.data.frame(dt)
+  rownames(df) <- df$rawcolumnnames
+  #### remove columns containing only missing values ####
+  df <- df[,!apply(df, 2, function(x){sum(is.na(x))}) == nrow(df)]
+  #### Add Tissue and disease annotations ####
+  df <- df[df$dataset %in% unique(overview$ID),]
+  df$disease <- NULL; df$tissue <- NULL
+  df$disease <- NA; df$tissue <- NA
+  O2 <- overview[,c("ID", "Tissue", "Disease"), with = FALSE]
+  #### add tissue and disease columns ####
+  tempID <- unique(O2$ID)
+  for(i in 1:length(tempID)){
+    tempDF <- df[df$dataset == tempID[i],]
+    if(nrow(tempDF) > 0){
+      tempAn <- unique(O2[O2$ID == tempID[i],])
+      tempDF$disease <- tempAn$Disease
+      tempDF$tissue <- tempAn$Tissue
+      df <- rbind(df[!df$dataset == tempID[i],], tempDF) }
+  }
+  return(df)
+}
+
+########################################################
+#### Generate raw data summarized experiment object ####
+########################################################
+#' GenerateRawSE
+#'
+#' @param df A data frame containing meta data.
+#' @param ArrayDT A data table containing compiled raw data.
+#' @import SummarizedExperiment
+#' @import DESeq2
+#' @import dplyr
+#' @export
+GenerateRawSE <- function(df, ArrayDT, GTFFpath, overview){
+  print("Compiling annotation tables.")
+  #### remove records from annotation table not in data array ####
+  remove <- setdiff(rownames(df), colnames(ArrayDT))
+  dfsub <- df[!(rownames(df) %in% remove),]
+  #### add records to annotation table that are in data array ####
+  add <- setdiff(colnames(ArrayDT), rownames(df))
+  add <- add[!(add %in% c("ENTREZID_Human", "SYMBOL", "ENTREZID_Mouse"))]
+  addDT <- as.data.frame(matrix(data=NA, nrow = length(add), ncol = length(colnames(df))))
+  colnames(addDT) <- colnames(df)
+  rownames(addDT) <- add
+  dfsub <- rbind(dfsub, addDT)
+  #### Set up summarized experiment rowData
+  Rdata <- as.data.frame(ArrayDT[,c("ENTREZID_Human", "SYMBOL", "ENTREZID_Mouse")])
+  row.names(Rdata) <- ArrayDT$SYMBOL
+  #### Add the gene length information
+  print("Obtaining gene length information.")
+  grch38 <- as.data.frame(rtracklayer::import(GTFFpath))
+  grch38 <- grch38[,c("gene_id", "gene_name", "gene_biotype", "seqnames", "start", "end")]
+  # grch38 = read.table(file.path(homedir, "OverviewFiles", "GTF.gtf"))#"/home/jiaxueyu/Common/Homo_sapiens.GRCh38.109.gene.gtf")
+  colnames(grch38) = c("ENSEMBL", "SYMBOL", "Biotype", "Chr", "Start", "End")
+  grch38[,"Length"] = grch38$End - grch38$Start +1
+  length(intersect(Rdata$SYMBOL, grch38$SYMBOL)) # 39921 Mine: 40043
+  #### Perform annotation ####
+  print("Annotating gene length information onto rowData table.")
+  Rdata[, "Length"] = sapply(Rdata$SYMBOL, function(x){ if(x%in%grch38$SYMBOL){ rel_row=grch38[which(grch38$SYMBOL==x),]
+  return(max(rel_row[,"Length"])) } else{ return(NA) } })
+  #### Set up summarizedExperiment, columnData, and final data frame ####
+  print("Creating SummarizedExperiment object.")
+  FDat <- ArrayDT[,!(colnames(ArrayDT) %in% c("ENTREZID_Human", "SYMBOL", "ENTREZID_Mouse")), with = FALSE]
+  row.names(FDat) <- ArrayDT$SYMBOL
+  colDat <- dfsub[match(colnames(FDat), row.names(dfsub)),]
+  identical(rownames(colDat), colnames(FDat)) #### test if set up correctly ####
+  #### create summarizedExperiment object ####
+  RawSE <- SummarizedExperiment(assays=list(RawData=FDat), colData=colDat, rowData = Rdata)
+
+  #### Set up RPKM summarized experiment ####
+  ###########################################
+  print("Generating RPKM SummarizedExperiment object")
+  # raw_df = RawSE#readRDS(file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds") )
+  current_col = colData(RawSE)
+  row_df = rowData(RawSE)%>%as.data.frame()
+  raw_count_matrix = assay(RawSE)
+  all_samples = colnames(raw_count_matrix)
+  col_anno = current_col%>%as.data.frame()
+  Rnames <- rownames(raw_count_matrix)
+  raw_count_matrix = as.data.frame(raw_count_matrix)
+  row.names(raw_count_matrix) <- Rnames
+  #### Calculate RPKM values ####
+  col_anno.v2=col_anno
+  rnaseq_proj = col_anno.v2%>%dplyr::filter(assay.type=="RNA-Seq")%>%dplyr::select(dataset)%>%unlist()%>%as.vector()%>%unique()
+  fpkm_list.v2 = list()
+  for (i in 1:length(rnaseq_proj)) {
+    #### Obtain dataset ####
+    this_p = rnaseq_proj[i]
+    this_p.anno = col_anno.v2%>%dplyr::filter(dataset==this_p)%>%dplyr::select(c(rawcolumnnames, dataset, condition))
+    #### check if condition contains na values. If true, populate column.
+    if(sum(is.na(this_p.anno$condition)) > 0 | sum(this_p.anno$condition == "") > 0){
+      this_p.anno$condition <- as.factor(c(rep(1, floor(length(this_p.anno$condition)/2)), rep(2, ceiling(length(this_p.anno$condition)/2))))
+    }
+    this_p.samples = this_p.anno%>%dplyr::select(rawcolumnnames)%>%unlist()%>%as.vector()
+    raw_count_this_p = raw_count_matrix[, this_p.samples]
+    raw_count_this_p = na.omit(raw_count_this_p)
+    #### Create a DEseq dataset object ####
+    count_dds = suppressWarnings(suppressMessages( DESeqDataSetFromMatrix(countData = raw_count_this_p, colData = this_p.anno, design = ~condition) ) )
+    count_dds = suppressMessages( estimateSizeFactors(count_dds) )
+    #### Obtain row data from DE object ####
+    row_df.sub = row_df[rownames(count_dds),]
+    row_df.sub = row_df.sub%>%dplyr::arrange(factor(SYMBOL, levels=rownames(count_dds)))
+    # print(table(row_df.sub$SYMBOL==rownames(count_dds)))
+    #### Obtain FPKM values ####
+    mcols(count_dds)$basepairs = row_df.sub$Length
+    fpkm_df = fpkm(count_dds, robust = T)%>%as.data.frame()
+    #### Add gene name and save to list ####
+    fpkm_df[, "GeneName"] = rownames(fpkm_df)
+    fpkm_list.v2[[i]] = fpkm_df
+    print(paste("RPKM values for", i, "of", length(rnaseq_proj), " datasets completed"))
+  }
+  #### format array datasets ####
+  normed_array = col_anno.v2%>%dplyr::filter(assay.type=="Array")%>%dplyr::select(dataset)%>%unlist()%>%as.vector()%>%unique()
+  array_list.v3 = list()
+  for (i in 1:length(normed_array)) {
+    this_p = normed_array[i]
+    # print(this_p)
+    this_p.anno = col_anno.v2%>%dplyr::filter(dataset==this_p)%>%dplyr::select(c(rawcolumnnames, dataset, condition))
+    # print(dim(this_p.anno))
+    this_p.samples = this_p.anno%>%dplyr::select(rawcolumnnames)%>%unlist()%>%as.vector()
+    raw_count_this_p = raw_count_matrix[, this_p.samples]
+    # print(dim(raw_count_this_p))
+    array_list.v3[[i]] = as.data.frame(raw_count_this_p)
+    # print(paste("Array values for", i, "of", length(normed_array), " datasets completed"))
+  }
+  #### merge the FPKM processed by DESeq2 and the un-processed microarray ####
+  fpkm_all_df = Reduce(function(x,y)merge(x, y, all=T, by="GeneName"), fpkm_list.v2)
+  array_all_df = Reduce(cbind, array_list.v3)
+  array_all_df[,"GeneName"] = rownames(array_all_df)
+  norm_df = merge(fpkm_all_df, array_all_df, all=T, by = "GeneName")
+  rownames(norm_df) = norm_df$GeneName
+  norm_df = norm_df%>%dplyr::select(!GeneName)
+  # make SummarizedExperiment object
+  #### re-order the gene annotation file ####
+  row_df = row_df%>%arrange(factor(SYMBOL, levels = rownames(norm_df)))
+  #### re-arrange to the order of column annotation ####
+  col_anno.v3 = col_anno.v2%>%dplyr::filter(rawcolumnnames%in%colnames(norm_df))
+  col_anno.v3 = col_anno.v3%>%arrange(factor(rawcolumnnames, levels=colnames(norm_df)))
+  #### further annotate the datasets ####
+  overview_file.sub = overview%>%dplyr::select(c(ID, Technology, Disease, Tissue))%>%distinct()%>%mutate(dataset=ID)
+  col_anno.v4 = merge(col_anno.v3, overview_file.sub, by = "dataset", all.x=T)
+  #### create summarized experiment object ####
+  col_anno.v4[, "facet_name"] = paste(col_anno.v4$dataset, col_anno.v4$Technology, col_anno.v4$Disease, col_anno.v4$Tissue, sep = "\n")
+  col_anno.v4 = col_anno.v4%>%arrange(factor(rawcolumnnames, levels=colnames(norm_df)))
+  rownames(col_anno.v4) = col_anno.v4$rawcolumnnames
+  expression_norm.v2= SummarizedExperiment(assays=list(Expression=norm_df),
+                                           rowData =  row_df, colData=col_anno.v4)
+  #### Return Summarized Experiment objects ####
+  ##############################################
+  return(list(RawSE=RawSE, RPKMSE = expression_norm.v2))
+}
+

@@ -2,30 +2,27 @@
 % Please edit documentation in R/hello.R
 \name{RawDataCompile}
 \alias{RawDataCompile}
-\title{Combine all raw data into one data table.}
+\title{RawDataCompile}
 \usage{
 RawDataCompile(
-  Fpath = file.path(homedir, "5_AppData"),
+  Fpath = file.path(homedir, "AppData"),
   outPath = file.path("./6_ProcessFiles/RawData.txt"),
   StartAt = 1,
   sleep = 20,
-  DataType = "Array",
-  CheckIdenticalData = FALSE
+  DataType = "Array"
 )
 }
 \arguments{
-\item{Fpath}{The file path to the directory where the raw data is stored.}
+\item{Fpath}{The directory where raw tables are stored.}
 
-\item{outPath}{The path to the assembled raw data file.}
+\item{outPath}{The directory where the compiled table should be saved}
 
-\item{StartAt}{A numeric value indicating the position of the raw datasets to start compiling raw data from.}
+\item{StartAt}{Indicates the file number to start combining data from.}
 
-\item{sleep}{The number of seconds each iteration should wait before starting the next.}
+\item{sleep}{The amount of time to pause between incorporating the next dataset. Only needed if using a machine that syncronizes the file to the cloud.}
 
-\item{DataType}{Either "Array", "RNAseqRPKM", or "RNAseqCount" indicating the type of raw data to assemble into a data frame.  Only "Array" is used for data generated using GEO2R.}
-
-\item{SampleSelect}{A logical vector indicating which raw datasets to incorporate into the app.}
+\item{DataType}{Either "Array", "RNAseqRPKM", or "RNAseqCount" indicating the type of data that is incorporated.}
 }
 \description{
-Combine all raw data into one data table.
+RawDataCompile
 }
