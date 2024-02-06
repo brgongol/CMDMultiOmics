@@ -141,16 +141,57 @@ ui <- fluidPage(
              ) ,width = 10),
 
     tabPanel("Proteomics", fluid = TRUE,
-             sidebarPanel(
-               selectInput("ProteomicDataset", "Select Dataset:", choices = c(ProteomicAvail, "Select Dataset"), selected = "Select Dataset"),
-               numericInput("ProteomicFC", "Enter log2(Fold Change) cutoff", 1, min = 0, max = 70),
-               selectInput("ProteomicHypothesisTestDE", "Hypothesis Test", choices = c("p.adj", "p.val", "BHCorrection"), multiple = FALSE, selected = "p.adj"),
-               numericInput("ProteomicPval", "Enter significance cutoff", 0.05, min = 0, max = 1),
-               actionButton("ProteomicSubmit", "Plot Selection"),
-               uiOutput("Proteomictext")  ),
-             mainPanel(markdown(' <br> <br> <br>'),
-                       plotOutput("Proteomicvolcano")  ),
-             DT::dataTableOutput("ProteomicDETable") ),
+             tabsetPanel(
+               tabPanel("Differential Expression Analysis", fluid = TRUE,
+                        sidebarPanel(
+                          selectInput("ProteomicDataset", "Select Dataset:", choices = c(ProteomicAvail, "Select Dataset"), selected = "Select Dataset"),
+                          numericInput("ProteomicFC", "Enter log2(Fold Change) cutoff", 1, min = 0, max = 70),
+                          selectInput("ProteomicHypothesisTestDE", "Hypothesis Test", choices = c("p.adj", "p.val", "BHCorrection"), multiple = FALSE, selected = "p.adj"),
+                          numericInput("ProteomicPval", "Enter significance cutoff", 0.05, min = 0, max = 1),
+                          actionButton("ProteomicSubmit", "Plot Selection"),
+                          uiOutput("Proteomictext")  ),
+                        mainPanel(markdown(' <br> <br> <br>'),
+                                  plotOutput("Proteomicvolcano")  ),
+                        DT::dataTableOutput("ProteomicDETable") ),
+
+
+               tabPanel("Differntial expression - Multi-Dataset", fluid = TRUE,
+                        markdown('##### **Overview**
+                                 - Tools in this section can be used to explore the level of gene expression across a custom selection of genes and datasets. <br>
+
+                                 - Genes can be selected by typing in the first few letters of the gene name in the `Select genes` menu and then selecting the gene of interest from the drop down menu. Alternatively,
+                                 A gene can be removed my clicking on its name and pressing the backspace button. Several genes are loaded at startup as an example. <br>
+
+                                 - Labels under the `Select Multiple Datasets` menu follow a naming convention with underscore separaters in which the first value indicates the
+                                 dataset number, the second value indicates the treatment sample, and the third value indicates the reference sample used in a differential
+                                 gene expression analysis (e.g.: Dataset_Treatment_Reference).
+
+                                 - The first dataset can be selected by clicking on a dataset of interest under the `Select Multiple Datasets` menu. Additional
+                                 datasets can be selected by holding the control key and left-clicking on the additional datasets of interest. Selected comparisons are
+                                 highlighted in grey. <br>
+
+                                 - Clicking on the `Plot Selection` button will generate a heatmap of the fold changes for each selected gene across selected differential gene expression
+                                 comparisons. In addition, a barplot of the average up- and down- regulated expression level of each selected gene is plotted as a bar plot below
+                                 the heatmap. This barplot is ordered in descending order by the number of selected comparisons a gene is up-regulated in. The numbers
+                                 above the bars indicate the number of comparisons the average expression level was calculated from. <br>
+
+                                 - Significance and fold change cutoff values can be applied. First, select the hypothesis test to use for the significance cutoff.
+                                 Next, enter the Fold Change cutoff and Significance cutoff to apply. The absolute value of the fold change is applied to the cutoff.
+                                 Clicking the Plot Selection button will adjust the bargraph to only include comparison values for all genes that meet the respective cutoff values.
+                                 '),
+                        fluidRow(column(6, selectizeInput("ProteomicGenesHeat", "Select genes:", choices = NULL, multiple = TRUE, width = '100%',  size = 6)),
+                                 column(6, selectInput("ProteomicDEdatasetHeat", "Select Multiple Datasets:",choices = ProteomicAvail, multiple = TRUE, selected = NULL,width = '100%', selectize = FALSE, size = 6 ) ) ),
+                        fluidRow(column(2, selectInput("ProteomicScaleData", "Row Scale Data:", choices = c(TRUE, FALSE), multiple = FALSE, selected = FALSE) ),
+                                 column(2, selectInput("ProteomicHypothesisTest", "Hypothesis Test", choices = c("p.val", "p.adj", "BHCorrection"), multiple = FALSE, selected = "p.adj") ),
+                                 column(3, numericInput("ProteomicFCMultiBar", "Fold Change cutoff", 1, min = 0, max = 70)   ),
+                                 column(2, numericInput("ProteomicPvalMultiBar", "Significance cutoff", 1, min = 0, max = 1) ),
+                                 fluidRow(column(1, align="center", actionButton("ProteomicHeatsubmit", "Plot Selection") )) ),
+                        fluidRow(column(12, plotOutput("Proteomicheat", inline = TRUE)),  align="center"), br(), br(),
+                        fluidRow(column(12, plotOutput("ProteomicheatBar", inline = TRUE)),  align="center"), br(), br(),
+                        fluidRow(column(12, DT::dataTableOutput("ProteomicheatText")),  align="center" )
+               ),
+
+             ) ,width = 10),
 
     tabPanel("Methylation", fluid = TRUE,
              sidebarPanel(

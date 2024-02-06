@@ -21,7 +21,6 @@ AvailComps <- data.table(Dataset = gsub("_.+", "", names(assays(DESE))), Compari
 genesAll <- rowData(DESE)$SYMBOL
 #### Overview table ####
 overview <- fread(file.path(homedir, "OverviewFiles", "GEODataOverview3.csv"), header = TRUE)
-# overview <- overview[GEO2R == TRUE,]
 overview <- overview[!ID == "",]
 overview$Website <- paste("<a href=", overview$Website, "target=_blank>", "GEO_website", "</a>")
 overview[grepl("href=  target=_blank", overview$Website),]$Website <- NA
@@ -35,6 +34,8 @@ tissueAll = unique(overview$Tissue)
 #### Metabolomics data ####
 metabolomicsData <- readRDS(file.path(homedir, "Metabolomics", "mtbls298.de.RDS"))
 names(metabolomicsData) <- c("Basal_Artery_Basal_Vein", "Insulin_Artery_Insulin_Vein")
+#### Proteomics tab ####
+Proteins <- readRDS(file.path(homedir, "OverviewFiles", "ProteomicProteins.RDS"))
 
 ###############################
 #### Summary plot function ####
@@ -252,7 +253,7 @@ CrossDataHeat <- function(DESE, GeneSelection, Dataselection, ScaleData, plottyp
       for(i in 1:length(assaySelect)){ dat <- assaySelect[[i]]
       colnames(dat) <- paste(colnames(dat), names(assaySelect)[i], sep = "_")
       if(i == 1){ compiledDF <-dat
-      } else { compiledDF <- merge(compiledDF, dat, by = "row.names")
+      } else { compiledDF <- merge(compiledDF, dat, by = "row.names", all = TRUE)
       row.names(compiledDF) <- compiledDF$Row.names
       compiledDF$Row.names <- NULL  } }
       #### create heatmap ####
@@ -670,6 +671,193 @@ ProteomicTableDisplay <- function(Path=file.path(homedir, "Proteomic_3"),
   }
 }
 
+################################################
+#### Proteomic Multi-Study Heatmap function ####
+################################################
+CrossDataHeatProteomic <- function(fPath, GeneSelection, Dataselection, ScaleData, plottype, FCCutoff, PCutoff, SigCol){
+  if(!is.null(Dataselection)){
+    #### Load selected datasets and combine results ####
+    loadFiles <- file.path(fPath, paste(Dataselection, ".rds", sep = ""))
+    for(i in 1:length(loadFiles)){
+      tempProt <- readRDS(loadFiles[i])
+      dat <- rowData(tempProt)
+      dat <- dat[!(colnames(dat) %in% c("name", "Sample", "ProteinID", "GeneSymbol", "Description", "Numberofpeptides", "ID", "imputed", "num_NAs"))]
+      #### Update column names ####
+      colnames(dat) <- paste(gsub("-.+", "", gsub(".+/", "", loadFiles[i])),colnames(dat)[1:length(colnames(dat))], sep = ":")
+      rownames(dat) <- toupper(rownames(dat))
+      if(i == 1){ compiledDF <-dat
+      } else { compiledDF <- merge(compiledDF, dat, by = "row.names", all = TRUE)
+      row.names(compiledDF) <- compiledDF$Row.names
+      compiledDF$Row.names <- NULL  }
+    }
+    #### perform gene selection ####
+    compiledDF <- compiledDF[toupper(rownames(compiledDF)) %in% toupper(GeneSelection),]
+    if(nrow(compiledDF) > 0){
+    #### Perform analyses  ####
+    ###########################
+    if(plottype == "Heat"){
+      selcomps <- unique(mgsub(colnames(compiledDF), c("_CI.L", "_CI.R", "_diff", "_p.adj", "_p.val", "_BHCorrection"), c("","","","","","")))
+      DFsub3 <- data.table()
+      for(b in 1:length(selcomps)){
+        temp <- compiledDF[,grepl(selcomps[b], colnames(compiledDF))]
+        temp <- temp[,grepl(paste("diff", SigCol, sep = "|"), colnames(temp))]
+        colnames(temp) <- c("logFC", "Significance")
+        temp$SYMBOL <- rownames(temp)
+        temp$Comparison <- selcomps[b]
+        DFsub3 <- rbind(DFsub3, temp)
+      }
+      d1 <- DFsub3[abs(logFC) > FCCutoff & Significance < PCutoff,]
+      d2 <- DFsub3[!(paste(DFsub3$SYMBOL, DFsub3$Comparison, sep = "") %in% paste(d1$SYMBOL, d1$Comparison, sep = "")),][, `:=` (logFC = NA, Significance = NA)][]
+      d3 <- rbind(d1, d2)
+      d3 <- d3[,c("logFC", "SYMBOL", "Comparison"), with = FALSE]
+      DFsub <- reshape2::dcast(d3, SYMBOL~Comparison, value.var = "logFC")
+      rownames(DFsub) <- DFsub$SYMBOL
+      DFsub$SYMBOL <- NULL
+      DFsub2 <- DFsub
+      #### scale data ####
+      if(ScaleData){
+        transMat <- t(DFsub2)
+        Rnames <- row.names(transMat)
+        transMat <- suppressWarnings(apply(transMat, 2, as.numeric))
+        rowScaled <- apply(as.matrix(transMat), 2, scale)
+        rownames(rowScaled) <- Rnames
+        DFsub2 <- as.data.frame(t(rowScaled))
+      }
+      DFsub2$names <- row.names(DFsub)
+      mel <- as.data.table(reshape2::melt(DFsub2))
+      if(ScaleData){
+        setnames(mel, c("names", "variable", "value"), c("Gene", "Dataset", "Scaled log2(Fold Change)"))
+        p <- ggplot(mel, aes(x = Dataset, y=Gene, fill = `Scaled log2(Fold Change)`)) +
+          geom_tile(color = "white", lwd = 0.75, linetype = 1) +
+          scale_fill_gradient2(low = "#075AFF",
+                               high= "#FF0000") +
+          coord_fixed() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+      } else {
+        setnames(mel, c("names", "variable", "value"), c("Gene", "Dataset", "log2(Fold Change)"))
+        p <- ggplot(mel, aes(x = Dataset, y=Gene, fill = `log2(Fold Change)`)) +
+          geom_tile(color = "white", lwd = 0.75, linetype = 1) +
+          scale_fill_gradient2(low = "#075AFF",
+                               # mid = "#FFFFCC",
+                               high= "#FF0000") +
+          coord_fixed() +
+          theme(axis.text.x = element_text(angle = 90, hjust = 1))
+      }
+      return(p) }
+    #### Obtain counts of selected genes and return a barplot ####
+    if(plottype == "Bar"){
+      selcomps <- unique(mgsub(colnames(compiledDF), c("_CI.L", "_CI.R", "_diff", "_p.adj", "_p.val", "_BHCorrection"), c("","","","","","")))
+      DFsub3 <- data.table()
+      for(b in 1:length(selcomps)){
+        temp <- compiledDF[,grepl(selcomps[b], colnames(compiledDF))]
+        temp <- temp[,grepl(paste("diff", SigCol, sep = "|"), colnames(temp))]
+        colnames(temp) <- c("logFC", "Significance")
+        temp$SYMBOL <- rownames(temp)
+        temp$Comparison <- selcomps[b]
+        DFsub3 <- rbind(DFsub3, temp)
+      }
+      great <- DFsub3[logFC > FCCutoff & Significance < PCutoff,]
+      FCGreat <- great[, .(AveFC = mean(logFC, na.rm = TRUE)), by = "SYMBOL"]
+      setnames(FCGreat, c("SYMBOL"), c("GeneName"))
+      if(nrow(great) > 0){
+        great <- data.table(table(great$SYMBOL)) %>% setnames(c("V1", "N"), c("GeneName", "Nup"))
+        great <- merge(great, FCGreat, by = "GeneName")
+        GreatCountAll <- great
+        great <- great[order(great$Nup, decreasing = TRUE),]#[1:25,]
+      }
+      less <- DFsub3[logFC < -FCCutoff & Significance < PCutoff,]
+      FCless <- less[, .(AveFC = mean(logFC, na.rm = TRUE)), by = "SYMBOL"]
+      setnames(FCless, c("SYMBOL"), c("GeneName"))
+      if(nrow(less) > 0){
+        less <- data.table(table(less$SYMBOL)) %>% setnames(c("V1", "N"), c("GeneName", "Ndown"))
+        less <- merge(less, FCless, by = "GeneName")
+        lessCountAll <- less
+        less <- less[order(less$Ndown, decreasing = TRUE),]#[1:25,]
+      }
+      if((nrow(great) > 0 & nrow(less) > 0)){
+        final <- merge(great, less, by = "GeneName", all = TRUE)
+        #### Merge Fold Change ####
+        final$AveFC <- 0
+        for(b in 1:nrow(final)){
+          t <- c(final[b,]$AveFC.x, final[b,]$AveFC.y)
+          t <- t[!is.na(t)]
+          if(length(t) > 1){
+            F2 <- data.table()
+            for(c in 1:length(t)){
+              F2 <- rbind(F2, final[b,])
+            }
+            F2$AveFC <- t
+            final <- rbind(final, F2)
+          } else{ final$AveFC[b] <- t[!is.na(t)]
+          } }
+        final$AveFC.x <- NULL; final$AveFC.y <- NULL
+        final <- final[!AveFC == 0,]
+        final <- unique(final)
+        #### Merge counts ####
+        final$direction <- "NA"
+        final$counts <- 0
+        for(b in 1:nrow(final)){
+          up <- final$Nup[b]
+          down <- final$Ndown[b]
+          fc <- final$AveFC[b]
+          if(fc > 0){
+            final$direction[b] <- "up"
+            final$counts[b] <- up
+          } else {
+            final$direction[b] <- "down"
+            final$counts[b] <- down
+          } }
+        final$Nup <- NULL; final$Ndown <- NULL
+        final <- rbind(final[direction == "up",][order(-counts, -AveFC),],
+                       final[direction == "down",][order(counts, -AveFC),])
+      }
+      if(nrow(great) > 0 & nrow(less) == 0){
+        final <- great
+        final$direction <- "up"
+        setnames(final, c("Nup"), c("counts"))
+        final <- final[order(-counts, AveFC),]
+      }
+      if(nrow(great) == 0 & nrow(less) > 0){
+        final <- less
+        final$direction <- "down"
+        setnames(final, c("Ndown"), c("counts"))
+        final <- final[order(-counts, AveFC),]
+      }
+      if(!is.null(final)){
+        final$GeneName <- factor(final$GeneName, levels = unique(final$GeneName ))
+        p <- ggplot(final, aes(GeneName, AveFC, fill = direction)) +
+          geom_bar(position = "dodge", stat = "identity") +
+          geom_text(aes(label=counts), vjust=-0.5) +
+          theme(axis.text.y = element_text(angle = 0, hjust = 1),
+                axis.text.x = element_text(angle = 90, hjust = 1),
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                panel.background = element_blank(),
+                axis.line = element_line(colour="black") ) +
+          ylab("Average log2(Fold change)")+
+          xlab("Gene Name")+
+          ggtitle(paste("average fold change across comparisons")) +
+          scale_fill_manual(values = RColorBrewer::brewer.pal(11, "RdYlBu")[c(10,2)])
+      }
+      return(p) }
+    if(plottype == "Table"){
+      selcomps <- unique(mgsub(colnames(compiledDF), c("_CI.L", "_CI.R", "_diff", "_p.adj", "_p.val", "_BHCorrection"), c("","","","","","")))
+      DFsub3 <- data.table()
+      for(b in 1:length(selcomps)){
+        temp <- compiledDF[,grepl(selcomps[b], colnames(compiledDF))]
+        temp <- temp[,grepl(paste("diff", SigCol, sep = "|"), colnames(temp))]
+        colnames(temp) <- c("logFC", "Significance")
+        temp$SYMBOL <- rownames(temp)
+        temp$Comparison <- selcomps[b]
+        DFsub3 <- rbind(DFsub3, temp)
+      }
+      d1 <- DFsub3[abs(logFC) > FCCutoff & Significance < PCutoff,]
+      CompDF <- d1[!is.na(d1$logFC),]
+      CompDF <- CompDF[order(SYMBOL),]
+      return(as.data.frame(CompDF))
+    } }
+  }
+}
+
 ##########################################
 #### Return metabolite DE information ####
 ##########################################
@@ -910,6 +1098,44 @@ server <- function(input, output, session) {
     ProteomicTableDisplay(Path=file.path(homedir, "Proteomic_3"), Fname=input$ProteomicDataset,
                           alpha = input$ProteomicPval, lfc = input$ProteomicFC,
                           sigCol=input$ProteomicHypothesisTestDE), filter = 'top', options = list(pageLength = 15, scrollX = TRUE, scrollY = '400px', autoWidth = TRUE, dom = 'ltipr'), escape = FALSE )
+
+  ##################################
+  #### Proteomic DE Heatmap tab ####
+  ##################################
+  updateSelectizeInput(session, 'ProteomicGenesHeat', choices = Proteins, server = TRUE, selected = c("EXOC6B","AKAP12","CTNNBIP1","VCPIP1","AP1AR","CNBP","KRT5","PLP2","RPS28"))
+
+  output$Proteomicheat <- renderPlot({
+    req(input$ProteomicHeatsubmit)
+    CrossDataHeatProteomic(fPath = file.path(homedir, "Proteomic_3"),
+                           GeneSelection = isolate(input$ProteomicGenesHeat),
+                           Dataselection = isolate(input$ProteomicDEdatasetHeat),
+                           ScaleData = isolate(input$ProteomicScaleData),
+                           plottype = "Heat",
+                           FCCutoff = isolate(input$ProteomicFCMultiBar),
+                           PCutoff = isolate(input$ProteomicPvalMultiBar),
+                           SigCol = isolate(input$ProteomicHypothesisTest))  },  height = 1000, width=1300)
+
+  output$ProteomicheatBar <- renderPlot({
+    req(input$ProteomicHeatsubmit)
+    CrossDataHeatProteomic(fPath = file.path(homedir, "Proteomic_3"),
+                           GeneSelection = isolate(input$ProteomicGenesHeat),
+                           Dataselection = isolate(input$ProteomicDEdatasetHeat),
+                           ScaleData = isolate(input$ProteomicScaleData),
+                           plottype = "Bar",
+                           FCCutoff = isolate(input$ProteomicFCMultiBar),
+                           PCutoff = isolate(input$ProteomicPvalMultiBar),
+                           SigCol = isolate(input$ProteomicHypothesisTest))  },  height = 1000, width=1300)
+
+  output$ProteomicheatText <- DT::renderDT(
+    CrossDataHeatProteomic(fPath = file.path(homedir, "Proteomic_3"),
+                           GeneSelection = input$ProteomicGenesHeat,
+                           Dataselection = input$ProteomicDEdatasetHeat,
+                           ScaleData = input$ProteomicScaleData,
+                           plottype = "Table",
+                           FCCutoff = isolate(input$ProteomicFCMultiBar),
+                           PCutoff = isolate(input$ProteomicPvalMultiBar),
+                           SigCol = isolate(input$ProteomicHypothesisTest)
+    ), filter = 'top', options = list(pageLength = 30, scrollX = TRUE, scrollY = '800px', autoWidth = TRUE, dom = 'ltipr'), escape = FALSE )
 
   ########################
   #### Metabolics tab ####
