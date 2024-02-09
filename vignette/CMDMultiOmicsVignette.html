@@ -1832,6 +1832,24 @@ function toggle_visibility(id1) {
 </div>
 <div id="installation-and-setup" class="section level1">
 <h1>Installation and setup</h1>
+<ol style="list-style-type: decimal">
+<li>Install dependencies <br></li>
+</ol>
+<pre class="r"><code>install.packages(c(&quot;plotly&quot;, &quot;shinyWidgets&quot;, &quot;data.table&quot;, &quot;feather&quot;, &quot;textclean&quot;, &quot;dplyr&quot;, &quot;ggplot2&quot;, &quot;RColorBrewer&quot;, &quot;stringr&quot;, &quot;readxl&quot;, &quot;R.utils&quot;, &quot;umap&quot;, &quot;tidyr&quot;, &quot;tidyverse&quot;, &quot;makeunique&quot;, &quot;radiant.data&quot;))
+
+BiocManager::install(c(&quot;Biobase&quot;, &quot;limma&quot;, &quot;DESeq2&quot;, &quot;org.Hs.eg.db&quot;, &quot;org.Mm.eg.db&quot;, &quot;org.Rn.eg.db&quot;, &quot;GEOquery&quot;, &quot;mia&quot;, &quot;clariomdhumantranscriptcluster.db&quot;, &quot;hugene10sttranscriptcluster.db&quot;, &quot;hugene20sttranscriptcluster.db&quot;, &quot;hugene11sttranscriptcluster.db&quot;, &quot;hgu133plus2.db&quot;, &quot;hwgcod.db&quot;, &quot;illuminaHumanv4.db&quot;, &quot;hta20transcriptcluster.db&quot;, &quot;hgu133a.db&quot;, &quot;AnnotationDbi&quot;, &quot;rpx&quot;, &quot;RforProteomics&quot;, &quot;BiocFileCache&quot;, &quot;DEP&quot;, &quot;NormalyzerDE&quot;, &quot;SummarizedExperiment&quot;))</code></pre>
+<ol start="2" style="list-style-type: decimal">
+<li>Install app <br></li>
+</ol>
+<pre class="r"><code>devtools::install_github(&quot;brgongol/MultiOmics&quot;)</code></pre>
+<ol start="3" style="list-style-type: decimal">
+<li>Execute app deployment <br></li>
+</ol>
+<pre class="r"><code>library(MultiOmics)
+homedir &lt;- &quot;path to database/MultiOmicsAnalysis&quot;
+makeDirectory(homedir)
+setwd(homedir)</code></pre>
+<p>Open and execute the “WorkflowScript.R” file in the “Scripts” directory.</p>
 <p>file structure and directory organization <br></p>
 <p><strong>AppData</strong> <br>
 <strong>ArraymetaData</strong> <br>
