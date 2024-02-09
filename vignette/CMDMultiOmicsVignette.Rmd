@@ -20,12 +20,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # About
 
-
-
-
+The `CMDMultiOmics` package provides a tool set within a shiny app environment for the integration of proprietary and open source data sets. Currently the `CMDMultiOmics` app houses custom selection of data that are related to a group of cardiometabolic diseases from trascriptomics, proteomics, methylation or metabolomic data types. This shiny application is paired with transcript expression and proteomics processing pipelines for the addition of user selected datasets. Details rgarding these workflows are escribed in this vignette which ends with the deployment of the shiny app.
 
 # Installation and setup
 
+There are three key steps involved in the installation and launch of the `CMDMultiOmics` package as outlined below. <br>
 
 1) Install dependencies <br>
 ```{r, warning=FALSE, message=FALSE, eval=FALSE}
@@ -40,16 +39,14 @@ devtools::install_github("brgongol/MultiOmics")
 ```
 
 3) Execute app deployment <br>
+In this step, the under must specify the path by editing the "path to database/MultiOmicsAnalysis" line of code where the database linked to the app will be located. The `makeDirectory` function then builds the specified directory containing the file structures needed to execute the remainder of this vignette and launch the application.   
 ```{r, warning=FALSE, message=FALSE, eval=FALSE}
 library(MultiOmics)
 homedir <- "path to database/MultiOmicsAnalysis"
 makeDirectory(homedir)
 setwd(homedir)
 ```
-
-Open and execute the "WorkflowScript.R" file in the "Scripts" directory.
-
-
+One the `makeDirectory` function has been executed, open the `Scripts` directory and load and execute the "WorkflowScript.R" file to install the database and load the shiny app.
 
 file structure and directory organization <br>
 

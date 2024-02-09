@@ -1849,7 +1849,10 @@ ProteomicProteinName <- function(fPath){
 #' @import data.table
 #' @import org.Hs.eg.db
 #' @import org.Mm.eg.db
+#' @import org.Rn.eg.db
 #' @import dplyr
+#' @import rtracklayer
+#' @import AnnotationDbi
 #' @export
 RawDataCompile <- function(Fpath = file.path(homedir, "AppData"), outPath = file.path("./6_ProcessFiles/RawData.txt"),
                            StartAt = 1, sleep = 20, GTFHumanFpath, GTFMouseFpath){ # DataType = "Array",
@@ -2050,7 +2053,7 @@ RawDataCompile <- function(Fpath = file.path(homedir, "AppData"), outPath = file
           } }
       }
       print(paste("incorporated", i, "of", length(files), sep = " "))
-      RawArrayComplete <- RawArrayComplete[!SYMBOL == "",]
+      RawArrayComplete <- RawArrayComplete[!RawArrayComplete$SYMBOL == "",]
       fwrite(RawArrayComplete, gsub("feather", "txt", outPath), row.names = FALSE, quote = FALSE, sep = "\t")
       Sys.sleep(sleep)
     }
