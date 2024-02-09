@@ -9,7 +9,8 @@ RawDataCompile(
   outPath = file.path("./6_ProcessFiles/RawData.txt"),
   StartAt = 1,
   sleep = 20,
-  DataType = "Array"
+  GTFHumanFpath,
+  GTFMouseFpath
 )
 }
 \arguments{
