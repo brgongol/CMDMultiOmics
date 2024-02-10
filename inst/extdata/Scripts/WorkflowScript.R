@@ -106,7 +106,7 @@ metaDF$rownames <- NULL
 #### Create raw data summarizedExperiment object ####
 #####################################################
 library(SummarizedExperiment)
-RawSEList <- GenerateRawSE(df = metaDF, ArrayDT=RawArrayComplete, GTFFpath = file.path(homedir, "OverviewFiles", "GTFHuman.gtf.gz"), overview=overview)
+RawSEList <- GenerateRawSE(df = metaDF, ArrayDT=RawArrayComplete, overview=overview)
 names(RawSEList)
 saveRDS(RawSEList[["RawSE"]], file=file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))
 RawSE <- readRDS(file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))

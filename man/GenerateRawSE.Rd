@@ -4,7 +4,7 @@
 \alias{GenerateRawSE}
 \title{GenerateRawSE}
 \usage{
-GenerateRawSE(df, ArrayDT, GTFFpath, overview)
+GenerateRawSE(df, ArrayDT, overview)
 }
 \arguments{
 \item{df}{A data frame containing meta data.}

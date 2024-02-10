@@ -2418,7 +2418,7 @@ MetDataCompile <- function(RNAseqFilePath, ArrayFilePath, overview){
 #' @import DESeq2
 #' @import dplyr
 #' @export
-GenerateRawSE <- function(df, ArrayDT, GTFFpath, overview){
+GenerateRawSE <- function(df, ArrayDT, overview){
   print("Compiling annotation tables.")
   #### remove records from annotation table not in data array ####
   remove <- setdiff(rownames(df), colnames(ArrayDT))
