@@ -1870,14 +1870,24 @@ RawDataCompile <- function(Fpath = file.path(homedir, "AppData"), outPath = file
       goHuman <- goHuman[!duplicated(SYMBOL),]
       #### Add the gene length information
       print("Obtaining human gene length information.")
-      grch38 <- as.data.frame(rtracklayer::import(GTFHumanFpath))
+      grch38 <- as.data.table(rtracklayer::import(GTFHumanFpath))
       grch38 <- grch38[,c("gene_id", "gene_name", "gene_biotype", "seqnames", "start", "end")]
       colnames(grch38) = c("ENSEMBL", "SYMBOL", "Biotype", "Chr", "Start", "End")
-      grch38[,"Length"] = grch38$End - grch38$Start +1
+      # grch38[, Length := (End - Start +1)]
+      grch38[, `:=`(Length = (End - Start + 1))]
+      grch38 <- grch38[, .SD[which.max(Length)], by=SYMBOL]
+      # grch38[,"Length"] = grch38$End - grch38$Start +1
+      # group[group[, .I[which.max(pt)], by=Subject]$V1]
+      # grch38
       #### Perform annotation ####
-      print("Annotating human gene length information onto rowData table.")
-      goHuman[, "Length"] = sapply(goHuman$SYMBOL, function(x){ if(x%in%grch38$SYMBOL){ rel_row=grch38[which(grch38$SYMBOL==x),]
-      return(max(rel_row[,"Length"])) } else{ return(NA) } })
+      # print("Annotating human gene length information onto rowData table.")
+      # goHuman[, "Length"] = sapply(goHuman$SYMBOL, function(x){ if(x%in%grch38$SYMBOL){ rel_row=grch38[which(grch38$SYMBOL==x),]
+      # return(max(rel_row[,"Length"])) } else{ return(NA) } })
+      # grch38[,c("SYMBOL", "Length"), with = FALSE]
+      goHuman <- merge(goHuman, grch38[,c("SYMBOL", "Length"), with = FALSE], by = "SYMBOL", all.x = TRUE)
+      goHuman <- goHuman[!duplicated(SYMBOL),]
+      goHuman <- goHuman[!SYMBOL == "",]
+      goHuman <- goHuman[!is.na(SYMBOL),]
       setnames(goHuman, c("Length"), c("Length_Human"))
       #### map Mouse annotation information to gene names ####
       ########################################################
@@ -1887,17 +1897,24 @@ RawDataCompile <- function(Fpath = file.path(homedir, "AppData"), outPath = file
       goMouse <- goMouse[!duplicated(SYMBOL),]
       #### Add the gene length information
       print("Obtaining mouse gene length information.")
-      GTF <- as.data.frame(rtracklayer::import(GTFMouseFpath))
+      GTF <- as.data.table(rtracklayer::import(GTFMouseFpath))
       GTF <- GTF[,c("gene_id", "gene_name", "gene_biotype", "seqnames", "start", "end")]
       colnames(GTF) = c("ENSEMBL", "SYMBOL", "Biotype", "Chr", "Start", "End")
-      GTF[,"Length"] = GTF$End - GTF$Start +1
+      # GTF[,"Length"] = GTF$End - GTF$Start +1
+      # GTF[, Length := (End - Start +1)]
+      GTF[, `:=`(Length = (End - Start + 1))]
+      # GTF
+      GTF <- GTF[, .SD[which.max(Length)], by=SYMBOL]
       # length(intersect(Rdata$SYMBOL, grch38$SYMBOL)) # 39921 Mine: 40043
       #### Perform annotation ####
-      print("Annotating mouse gene length information onto rowData table.")
-      goMouse[, "Length"] = sapply(goMouse$SYMBOL, function(x){ if(x%in%GTF$SYMBOL){ rel_row=GTF[which(GTF$SYMBOL==x),]
-      return(max(rel_row[,"Length"])) } else{ return(NA) } })
-      setnames(goMouse, c("Length"), c("Length_Mouse"))
+      # print("Annotating mouse gene length information onto rowData table.")
+      # goMouse[, "Length"] = sapply(goMouse$SYMBOL, function(x){ if(x%in%GTF$SYMBOL){ rel_row=GTF[which(GTF$SYMBOL==x),]
+      # return(max(rel_row[,"Length"])) } else{ return(NA) } })
+      goMouse <- merge(goMouse, GTF[,c("SYMBOL", "Length"), with = FALSE], by = "SYMBOL", all.x = TRUE)
       goMouse <- goMouse[!duplicated(SYMBOL),]
+      goMouse <- goMouse[!SYMBOL == "",]
+      goMouse <- goMouse[!is.na(SYMBOL),]
+      setnames(goMouse, c("Length"), c("Length_Mouse"))
       # #### map Rat annotation information to gene names ####
       # x<-org.Rn.egSYMBOL; symbols<-mappedkeys(x)
       # goRat <- as.data.table( select(org.Rn.eg.db, symbols, c("SYMBOL"), "ENTREZID") ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Rat", sep = "")))
@@ -1913,6 +1930,8 @@ RawDataCompile <- function(Fpath = file.path(homedir, "AppData"), outPath = file
       mer <- mer[!grepl("---", mer$SYMBOL),]
       mer <- mer[!grepl("1-DEC", mer$SYMBOL),]
       mer <- mer[!grepl("1-MAR", mer$SYMBOL),]
+      mer <- mer[!is.na(SYMBOL),]
+      mer <- mer[!SYMBOL == "",]
       #### remove duplicated records if they exist ####
       dups <- unique(mer[duplicated(mer$SYMBOL),]$SYMBOL)
       if(length(dups) > 0){
@@ -2431,6 +2450,8 @@ GenerateRawSE <- function(df, ArrayDT, overview){
   rownames(addDT) <- add
   dfsub <- rbind(dfsub, addDT)
   #### Set up summarized experiment rowData
+  ArrayDT <- ArrayDT[!ArrayDT$SYMBOL == "",]
+  ArrayDT <- ArrayDT[!is.na(ArrayDT$SYMBOL),]
   Rdata <- as.data.frame(ArrayDT[,c("ENTREZID_Human", "SYMBOL", "ENTREZID_Mouse", "Length_Human", "Length_Mouse")])
   row.names(Rdata) <- ArrayDT$SYMBOL
   # #### Add the gene length information
@@ -2447,7 +2468,7 @@ GenerateRawSE <- function(df, ArrayDT, overview){
   # return(max(rel_row[,"Length"])) } else{ return(NA) } })
   #### Set up summarizedExperiment, columnData, and final data frame ####
   print("Creating SummarizedExperiment object.")
-  FDat <- ArrayDT[,!(colnames(ArrayDT) %in% c("ENTREZID_Human", "SYMBOL", "ENTREZID_Mouse", "Length_Human", "Length_Human")), with = FALSE]
+  FDat <- ArrayDT[,!(colnames(ArrayDT) %in% c("ENTREZID_Human", "SYMBOL", "ENTREZID_Mouse", "Length_Human", "Length_Mouse")), with = FALSE]
   row.names(FDat) <- ArrayDT$SYMBOL
   colDat <- dfsub[match(colnames(FDat), row.names(dfsub)),]
   identical(rownames(colDat), colnames(FDat)) #### test if set up correctly ####
