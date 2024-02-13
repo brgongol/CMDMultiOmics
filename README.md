@@ -26,7 +26,7 @@ Open and execute the "WorkflowScript.R" file in the "Scripts" directory. <br>
 
 
 
-![alt text](https://github.com/brgongol/CMDMultiOmics/images/Figure2.png?raw=true)
+![alt text](https://github.com/brgongol/CMDMultiOmics/images/main/Figure2.png?raw=true)
 
 
 
