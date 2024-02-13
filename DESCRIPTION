@@ -1,4 +1,4 @@
-Package: MultiOmics
+Package: CMDMultiOmics
 Type: Package
 Title: Environment for analysis and exploration of multi-omics data.
 Version: 0.1.0

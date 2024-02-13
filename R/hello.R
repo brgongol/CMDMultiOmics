@@ -16,7 +16,7 @@ makeDirectory <- function(homedir){
             file.path(homedir, "Proteomic_1"),
             file.path(homedir, "Proteomic_3") )
   sapply(dirs, dir.create)
-  SysFpath <- system.file("extdata/", package = "MultiOmics")
+  SysFpath <- system.file("extdata/", package = "CMDMultiOmics")
   from <- file.path(SysFpath, list.files(SysFpath))
   to <- file.path(homedir, list.files(SysFpath))
   sapply(seq_along(from), function(x){

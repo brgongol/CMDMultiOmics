@@ -2,8 +2,8 @@
 ############################
 #### set up environment ####
 ############################
-library(MultiOmics); library(data.table)
-homedir <- "path to database/MultiOmicsAnalysis"
+library(CMDMultiOmics); library(data.table)
+homedir <- "path to database/CMDMultiOmicsAnalysis"
 setwd(homedir)
 
 #####################################
@@ -71,6 +71,18 @@ ExternalDataHarmonize(Fpath = file.path(homedir, "ExternalAnalyzed"),
 (DESE <- DESEGenerate(DEGDatapath=file.path(homedir, "AppData"), SEPath = file.path(homedir, "ProcessFiles", "SumarizedExp_DB.rds") ))
 (DESE <- readRDS(file.path(homedir, "ProcessFiles", "SumarizedExp_DB.rds")))
 
+#########################################
+#### Create or update Raw data files #### issue of duplicated genes here probably because of multiple probes measuring the same gene. dealt with this by averaging
+#########################################
+#### Add Array data ####
+RawDataCompile(Fpath = file.path(homedir, "AppData"),
+               outPath = file.path("./ProcessFiles/RawData.txt"),
+               StartAt = 1,
+               sleep = 30,
+               GTFHumanFpath = file.path(homedir, "OverviewFiles", "GTFHuman.gtf.gz"),
+               GTFMouseFpath = file.path(homedir, "OverviewFiles", "GTFMouse.gtf.gz") )
+RawArrayComplete <- fread(file.path("./ProcessFiles/RawData.txt"))RawArrayComplete <- fread(file.path("./ProcessFiles/RawData.txt"))
+
 ###########################
 #### Download GTF file ####
 ###########################
@@ -79,17 +91,6 @@ download.file("https://ftp.ensembl.org/pub/current_gtf/homo_sapiens/Homo_sapiens
               destfile = file.path(homedir, "OverviewFiles", "GTFHuman.gtf.gz"), quiet = FALSE)
 download.file("https://ftp.ensembl.org/pub/current_gtf/mus_musculus/Mus_musculus.GRCm39.111.chr.gtf.gz",
               destfile = file.path(homedir, "OverviewFiles", "GTFMouse.gtf.gz"), quiet = FALSE)
-
-#########################################
-#### Create or update Raw data files #### issue of duplicated genes here probably because of multiple probes measuring the same gene. dealt with this by averaging
-#########################################
-RawDataCompile(Fpath = file.path(homedir, "AppData"),
-               outPath = file.path("./ProcessFiles/RawData.txt"),
-               StartAt = 1,
-               sleep = 60, # DataType = "Array",
-               GTFHumanFpath = file.path(homedir, "OverviewFiles", "GTFHuman.gtf.gz"),
-               GTFMouseFpath = file.path(homedir, "OverviewFiles", "GTFMouse.gtf.gz") )
-RawArrayComplete <- fread(file.path("./ProcessFiles/RawData.txt"))
 
 ############################################
 #### Create meta data for Raw data file #### #### run check ####
@@ -106,12 +107,12 @@ metaDF$rownames <- NULL
 #### Create raw data summarizedExperiment object ####
 #####################################################
 library(SummarizedExperiment)
-RawSEList <- GenerateRawSE(df = metaDF, ArrayDT=RawArrayComplete, overview=overview)
-names(RawSEList)
-saveRDS(RawSEList[["RawSE"]], file=file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))
+RawSE <- GenerateRawSE(df = metaDF, ArrayDT=RawArrayComplete, overview=overview)
+names(RawSE)
+saveRDS(RawSE[["RawSE"]], file=file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))
 RawSE <- readRDS(file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))
-assay(RawSEList[["RPKMSE"]])[1:5,1:5]; head(rowData(RawSEList[["RPKMSE"]])); head(colData(RawSEList[["RPKMSE"]]))
-saveRDS(RawSEList[["RPKMSE"]], file=file.path(homedir, "ProcessFiles", "expression_norm.v2.RDS"))
+assay(RawSE)[1:5,1:5]; head(rowData(RawSE)); head(colData(RawSE))
+saveRDS(RawSE[["RPKMSE"]], file=file.path(homedir, "ProcessFiles", "expression_norm.v2.RDS"))
 expression_norm <- readRDS(file.path(homedir, "ProcessFiles", "expression_norm.v2.RDS"))
 assay(expression_norm)[1:5,1:5]; head(rowData(expression_norm)); head(colData(expression_norm))
 
