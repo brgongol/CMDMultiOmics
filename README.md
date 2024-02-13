@@ -24,9 +24,9 @@ setwd(homedir) <br>
 Open and execute the "WorkflowScript.R" file in the "Scripts" directory. <br> 
 
 
-![Screenshot](Figure2.png)
+![Screenshot](/images/Figure2.png)
 
-![alt text](https://github.com/brgongol/CMDMultiOmics/images/main/Figure2.png)
+
 
 
 
