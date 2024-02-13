@@ -1,6 +1,6 @@
 # CMDMultiOmics
 
-The `CMDMultiOmics` package provides an expandable framework for the assembly, storage, integration, and visualization of transcriptomic, proteomic, methylome, and metabolome datasets. Currently the `CMDMultiOmics` app houses custom selection of data that are related to a group of cardiometabolic diseases from trascriptomics, proteomics, methylation or metabolomic data types. This shiny application is paired with transcript expression and proteomics processing pipelines for the addition of user selected data sets. 
+The `CMDMultiOmics` package provides an expandable framework for the assembly, storage, integration, and visualization of transcriptomic, proteomic, methylome, and metabolome datasets. Currently the `CMDMultiOmics` app houses custom selection of data that are related to a group of cardiometabolic diseases from trascriptomics, proteomics, methylation or metabolomic data types. This shiny application is paired with transcript expression and proteomics processing pipelines for the addition of user selected data sets. Additioan information can be found below or in the [vignette](https://htmlpreview.github.io/?https://github.com/brgongol/CMDMultiOmics/blob/main/inst/extdata/vignette/CMDMultiOmicsVignette.html).
 
 # Installation
 
