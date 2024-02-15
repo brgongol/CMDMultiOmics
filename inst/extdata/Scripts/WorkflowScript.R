@@ -71,6 +71,15 @@ ExternalDataHarmonize(Fpath = file.path(homedir, "ExternalAnalyzed"),
 (DESE <- DESEGenerate(DEGDatapath=file.path(homedir, "AppData"), SEPath = file.path(homedir, "ProcessFiles", "SumarizedExp_DB.rds") ))
 (DESE <- readRDS(file.path(homedir, "ProcessFiles", "SumarizedExp_DB.rds")))
 
+###########################
+#### Download GTF file ####
+###########################
+options(timeout=24000); getOption('timeout')
+download.file("https://ftp.ensembl.org/pub/current_gtf/homo_sapiens/Homo_sapiens.GRCh38.111.chr.gtf.gz",
+              destfile = file.path(homedir, "OverviewFiles", "GTFHuman.gtf.gz"), quiet = FALSE)
+download.file("https://ftp.ensembl.org/pub/current_gtf/mus_musculus/Mus_musculus.GRCm39.111.chr.gtf.gz",
+              destfile = file.path(homedir, "OverviewFiles", "GTFMouse.gtf.gz"), quiet = FALSE)
+
 #########################################
 #### Create or update Raw data files #### issue of duplicated genes here probably because of multiple probes measuring the same gene. dealt with this by averaging
 #########################################
@@ -82,15 +91,6 @@ RawDataCompile(Fpath = file.path(homedir, "AppData"),
                GTFHumanFpath = file.path(homedir, "OverviewFiles", "GTFHuman.gtf.gz"),
                GTFMouseFpath = file.path(homedir, "OverviewFiles", "GTFMouse.gtf.gz") )
 RawArrayComplete <- fread(file.path("./ProcessFiles/RawData.txt"))RawArrayComplete <- fread(file.path("./ProcessFiles/RawData.txt"))
-
-###########################
-#### Download GTF file ####
-###########################
-options(timeout=24000); getOption('timeout')
-download.file("https://ftp.ensembl.org/pub/current_gtf/homo_sapiens/Homo_sapiens.GRCh38.111.chr.gtf.gz",
-              destfile = file.path(homedir, "OverviewFiles", "GTFHuman.gtf.gz"), quiet = FALSE)
-download.file("https://ftp.ensembl.org/pub/current_gtf/mus_musculus/Mus_musculus.GRCm39.111.chr.gtf.gz",
-              destfile = file.path(homedir, "OverviewFiles", "GTFMouse.gtf.gz"), quiet = FALSE)
 
 ############################################
 #### Create meta data for Raw data file #### #### run check ####
