@@ -106,13 +106,13 @@ metaDF$rownames <- NULL
 #####################################################
 #### Create raw data summarizedExperiment object ####
 #####################################################
-library(SummarizedExperiment); library(dplyr)
-RawSE <- GenerateRawSE(df = metaDF, ArrayDT=RawArrayComplete, overview=overview)
-names(RawSE)
-saveRDS(RawSE[["RawSE"]], file=file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))
+library(SummarizedExperiment)
+RawSEList <- GenerateRawSE(df = metaDF, ArrayDT=RawArrayComplete, overview=overview)
+names(RawSEList)
+saveRDS(RawSEList[["RawSE"]], file=file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))
 RawSE <- readRDS(file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))
 assay(RawSE)[1:5,1:5]; head(rowData(RawSE)); head(colData(RawSE))
-saveRDS(RawSE[["RPKMSE"]], file=file.path(homedir, "ProcessFiles", "expression_norm.v2.RDS"))
+saveRDS(RawSEList[["RPKMSE"]], file=file.path(homedir, "ProcessFiles", "expression_norm.v2.RDS"))
 expression_norm <- readRDS(file.path(homedir, "ProcessFiles", "expression_norm.v2.RDS"))
 assay(expression_norm)[1:5,1:5]; head(rowData(expression_norm)); head(colData(expression_norm))
 
