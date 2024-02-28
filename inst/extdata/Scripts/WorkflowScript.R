@@ -66,8 +66,8 @@ ExternalDataHarmonize(Fpath = file.path(homedir, "ExternalAnalyzed"),
                       OutPath = file.path(homedir, "AppData"))
 
 ####################################################################################################
-#### Create or update Summarized experiment objects that integrate all data sets: DEG data only ####
-####################################################################################################
+#### Create or update Summarized experiment objects that integrate all data sets: DEG data only #### Checks for comparisons that are already in the database
+#################################################################################################### Duplicated comparisons are not deleted from "AppData"
 (DESE <- DESEGenerate(DEGDatapath=file.path(homedir, "AppData"), SEPath = file.path(homedir, "ProcessFiles", "SumarizedExp_DB.rds") ))
 (DESE <- readRDS(file.path(homedir, "ProcessFiles", "SumarizedExp_DB.rds")))
 
@@ -81,7 +81,7 @@ download.file("https://ftp.ensembl.org/pub/current_gtf/mus_musculus/Mus_musculus
               destfile = file.path(homedir, "OverviewFiles", "GTFMouse.gtf.gz"), quiet = FALSE)
 
 #########################################
-#### Create or update Raw data files ####
+#### Create or update Raw data files #### issue of duplicated genes here probably because of multiple probes measuring the same gene. dealt with this by averaging
 #########################################
 #### Add Array data ####
 RawDataCompile(Fpath = file.path(homedir, "AppData"),
@@ -90,10 +90,10 @@ RawDataCompile(Fpath = file.path(homedir, "AppData"),
                sleep = 30,
                GTFHumanFpath = file.path(homedir, "OverviewFiles", "GTFHuman.gtf.gz"),
                GTFMouseFpath = file.path(homedir, "OverviewFiles", "GTFMouse.gtf.gz") )
-RawArrayComplete <- fread(file.path("./ProcessFiles/RawData.txt"))
+RawArrayComplete <- fread(file.path("./ProcessFiles/RawData.txt"))RawArrayComplete <- fread(file.path("./ProcessFiles/RawData.txt"))
 
 ############################################
-#### Create meta data for Raw data file ####
+#### Create meta data for Raw data file #### #### run check ####
 ############################################
 metaDF <- MetDataCompile(RNAseqFilePath= file.path("RunInfo"), ArrayFilePath= file.path("ArrayMetaData"), overview=overview)
 #### Save meta data data frame ####
@@ -107,12 +107,12 @@ metaDF$rownames <- NULL
 #### Create raw data summarizedExperiment object ####
 #####################################################
 library(SummarizedExperiment)
-RawSEList <- GenerateRawSE(df = metaDF, ArrayDT=RawArrayComplete, overview=overview)
-names(RawSEList)
-saveRDS(RawSEList[["RawSE"]], file=file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))
+RawSE <- GenerateRawSE(df = metaDF, ArrayDT=RawArrayComplete, overview=overview)
+names(RawSE)
+saveRDS(RawSE[["RawSE"]], file=file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))
 RawSE <- readRDS(file.path(homedir, "ProcessFiles", "SumarizedExp_RawDB.rds"))
 assay(RawSE)[1:5,1:5]; head(rowData(RawSE)); head(colData(RawSE))
-saveRDS(RawSEList[["RPKMSE"]], file=file.path(homedir, "ProcessFiles", "expression_norm.v2.RDS"))
+saveRDS(RawSE[["RPKMSE"]], file=file.path(homedir, "ProcessFiles", "expression_norm.v2.RDS"))
 expression_norm <- readRDS(file.path(homedir, "ProcessFiles", "expression_norm.v2.RDS"))
 assay(expression_norm)[1:5,1:5]; head(rowData(expression_norm)); head(colData(expression_norm))
 
@@ -248,6 +248,12 @@ dataDiffNorm
 #### Save data to database ####
 ###############################
 SaveToProteomicDB(SEList=dataDiffNorm, Path=file.path(homedir, "Proteomic_3"))
+
+#########################################################################
+#### Create a single proteomics DE data summarized experiment object ####
+#########################################################################
+(DEProtSE <- DESEProtGenerate(ProtDatapath=file.path(homedir, "Proteomic_3"), SEPath = file.path(homedir, "ProcessFiles", "SumarizedProtExp_DB.rds")))
+(DEProtSE <- readRDS(file.path(homedir, "ProcessFiles", "SumarizedProtExp_DB.rds")))
 
 ###############################
 #### Setup Protein name DB ####

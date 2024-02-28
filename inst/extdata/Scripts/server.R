@@ -35,6 +35,7 @@ tissueAll = unique(overview$Tissue)
 metabolomicsData <- readRDS(file.path(homedir, "Metabolomics", "mtbls298.de.RDS"))
 names(metabolomicsData) <- c("Basal_Artery_Basal_Vein", "Insulin_Artery_Insulin_Vein")
 #### Proteomics tab ####
+DEProtSE <- readRDS(file.path(homedir, "ProcessFiles", "SumarizedProtExp_DB.rds"))
 Proteins <- readRDS(file.path(homedir, "OverviewFiles", "ProteomicProteins.RDS"))
 
 ###############################
@@ -280,8 +281,10 @@ CrossDataHeat <- function(DESE, GeneSelection, Dataselection, ScaleData, plottyp
         #### scale data ####
         if(ScaleData){
           transMat <- t(DFsub2)
+          Rnames <- row.names(transMat)
+          transMat <- suppressWarnings(apply(transMat, 2, as.numeric))
           rowScaled <- apply(as.matrix(transMat), 2, scale)
-          rownames(rowScaled) <- rownames(transMat)
+          rownames(rowScaled) <- Rnames
           DFsub2 <- as.data.frame(t(rowScaled))
         }
         DFsub2$names <- row.names(DFsub)
@@ -292,13 +295,13 @@ CrossDataHeat <- function(DESE, GeneSelection, Dataselection, ScaleData, plottyp
             geom_tile(color = "white", lwd = 0.75, linetype = 1) +
             scale_fill_gradient2(low = "#075AFF",
                                  high= "#FF0000") +
-            coord_fixed() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+            coord_fixed() +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1))
         } else {
           setnames(mel, c("names", "variable", "value"), c("Gene", "Dataset", "log2(Fold Change)"))
           p <- ggplot(mel, aes(x = Dataset, y=Gene, fill = `log2(Fold Change)`)) +
             geom_tile(color = "white", lwd = 0.75, linetype = 1) +
             scale_fill_gradient2(low = "#075AFF",
-                                 # mid = "#FFFFCC",
                                  high= "#FF0000") +
             coord_fixed() +
             theme(axis.text.x = element_text(angle = 90, hjust = 1))
@@ -323,7 +326,7 @@ CrossDataHeat <- function(DESE, GeneSelection, Dataselection, ScaleData, plottyp
           great <- data.table(table(great$SYMBOL)) %>% setnames(c("V1", "N"), c("GeneName", "Nup"))
           great <- merge(great, FCGreat, by = "GeneName")
           GreatCountAll <- great
-          great <- great[order(great$Nup, decreasing = TRUE),]#[1:25,]
+          great <- great[order(great$Nup, decreasing = TRUE),]
         }
         less <- DFsub3[logFC < -FCCutoff & Significance < PCutoff,]
         FCless <- less[, .(AveFC = mean(logFC, na.rm = TRUE)), by = "SYMBOL"]
@@ -332,7 +335,7 @@ CrossDataHeat <- function(DESE, GeneSelection, Dataselection, ScaleData, plottyp
           less <- data.table(table(less$SYMBOL)) %>% setnames(c("V1", "N"), c("GeneName", "Ndown"))
           less <- merge(less, FCless, by = "GeneName")
           lessCountAll <- less
-          less <- less[order(less$Ndown, decreasing = TRUE),]#[1:25,]
+          less <- less[order(less$Ndown, decreasing = TRUE),]
         }
         if((nrow(great) > 0 & nrow(less) > 0)){
           final <- merge(great, less, by = "GeneName", all = TRUE)
@@ -417,9 +420,9 @@ CrossDataHeat <- function(DESE, GeneSelection, Dataselection, ScaleData, plottyp
         return(as.data.frame(CompDF))
       } } } }
 
-#############################
-#### Violin plot of FPKM ####
-#############################
+####################################
+#### Check NA boxplot NA values ####
+####################################
 check_na = function(raw_df, select_gene, select_data){
   samples_gse = paste(select_data, collapse = "|")
   print(samples_gse)
@@ -428,22 +431,21 @@ check_na = function(raw_df, select_gene, select_data){
   return(any(is.na(df_subset%>%assay())))
 }
 
+#############################################
+#### Violin plot of FPKM Single data set ####
+#############################################
 box_violin_plot_v2.single = function(input_df, select_gene, select_proj, log10){
   # remove the NA ones, if no NA, ignore this step
-  project_meta = colData(input_df)[,c("disease", "organism", "platform", "dataset", "rawcolumnnames", "cell_type", "tissue_type", "cell_line", "Condition")]
+  project_meta = colData(input_df)[,c("disease", "organism", "platform", "dataset", "rawcolumnnames", "cell_type", "tissue_type", "cell_line", "condition")]
   project_meta = project_meta[!is.na(project_meta$dataset),]
   raw_df_select_sample = project_meta%>%as.data.frame()%>%dplyr::filter(dataset%in%select_proj)%>%dplyr::select(rawcolumnnames)%>%unlist()%>%as.vector()
   # subset the data
   raw_df_summarized = input_df[rowData(input_df)$SYMBOL%in%select_gene, raw_df_select_sample]
-  raw_df_melt = meltAssay(raw_df_summarized, assay_name="Expression", add_row_data = "SYMBOL", add_col_data = c("dataset", "rawcolumnnames", "Condition"))%>%as.data.frame() # assay.type = "FPKM",
+  raw_df_melt = meltAssay(raw_df_summarized, assay_name="Expression", add_row_data = "SYMBOL", add_col_data = c("dataset", "rawcolumnnames", "condition"))%>%as.data.frame() # assay.type = "FPKM",
   # replace NAs with 0
-  #raw_df_melt[is.na(raw_df_melt)] <- 0.01
-  #print(head(raw_df_melt))
   raw_df_melt = na.omit(raw_df_melt)
-
-  #print(head(raw_df_melt))
   # color palette
-  box_count = length(unique(raw_df_melt$Condition))
+  box_count = length(unique(raw_df_melt$condition))
   coul = brewer.pal(9, "Set3")
   coul = colorRampPalette(coul)(box_count)
   # log transformation
@@ -451,7 +453,7 @@ box_violin_plot_v2.single = function(input_df, select_gene, select_proj, log10){
     raw_df_melt$Expression = log10(raw_df_melt$Expression+1)
     ylab_t = expression(~log[10]~(NormalizedExpression))
   } else{ ylab_t = "NormalizedExpression" }
-  p=ggplot(data = raw_df_melt, aes(x=Condition, y=Expression, fill=Condition))+
+  p=ggplot(data = raw_df_melt, aes(x=condition, y=Expression, fill=condition))+
     geom_violin(scale = "width", trim = T, alpha = 0.7)+
     geom_boxplot(outlier.shape = NA,coef = 0, fill="gray", width=0.3)+
     coord_flip()+
@@ -472,22 +474,20 @@ box_violin_plot_v2.single = function(input_df, select_gene, select_proj, log10){
   return(p)
 }
 
-
+############################################
+#### Violin plot of FPKM Multi data set ####
+############################################
 box_violin_plot_v2.multi = function(input_df, overview_file, select_gene, select_disease, select_tech, select_tissue, log10){
   # remove the NA ones, if no NA, ignore this step
-  project_meta = colData(input_df)[,c("disease", "organism", "platform", "dataset", "rawcolumnnames", "cell_type", "tissue_type", "cell_line", "Condition")]
+  project_meta = colData(input_df)[,c("disease", "organism", "platform", "dataset", "rawcolumnnames", "cell_type", "tissue_type", "cell_line", "condition")]
   project_meta = project_meta[!is.na(project_meta$dataset),]
   select_group = overview_file%>%dplyr::filter(Disease%in%select_disease & Technology%in%select_tech & Tissue%in%select_tissue)%>%dplyr::select(ID)%>%unlist%>%as.vector()%>%unique()
   raw_df_select_sample = project_meta%>%as.data.frame()%>%dplyr::filter(dataset%in%select_group)%>%dplyr::select(rawcolumnnames)%>%unlist()%>%as.vector()
   raw_df_summarized = input_df[rowData(input_df)$SYMBOL%in%select_gene,raw_df_select_sample]
-  raw_df_melt = meltAssay(raw_df_summarized, assay_name="Expression", add_row_data = "SYMBOL", add_col_data = c("dataset", "rawcolumnnames", "Condition", "facet_name"))%>%as.data.frame() # assay.type = "FPKM",
-
-  #print(head(raw_df_melt))
-
-  #raw_df_melt[is.na(raw_df_melt)] <- 0.01
+  raw_df_melt = meltAssay(raw_df_summarized, assay_name="Expression", add_row_data = "SYMBOL", add_col_data = c("dataset", "rawcolumnnames", "condition", "facet_name"))%>%as.data.frame()
   raw_df_melt = na.omit(raw_df_melt)
   # color palette
-  box_count = length(unique(raw_df_melt$Condition))
+  box_count = length(unique(raw_df_melt$condition))
   coul = brewer.pal(9, "Set3")
   coul = colorRampPalette(coul)(box_count)
   # log transformation
@@ -495,10 +495,9 @@ box_violin_plot_v2.multi = function(input_df, overview_file, select_gene, select
     raw_df_melt$Expression = log10(raw_df_melt$Expression+1)
     ylab_t = expression(~log[10]~(NormalizedExpression))
   } else{ ylab_t = "NormalizedExpression" }
-  p=ggplot(data = raw_df_melt, aes(x=Condition, y=Expression, fill=Condition))+
+  p=ggplot(data = raw_df_melt, aes(x=condition, y=Expression, fill=condition))+
     geom_violin(scale = "width", trim = T, alpha = 0.7)+
     geom_boxplot(outlier.shape = NA,coef = 0, fill="gray", width=0.3)+
-    #coord_flip()+
     ylab(ylab_t)+
     xlab("")+
     theme_bw() +
@@ -511,7 +510,6 @@ box_violin_plot_v2.multi = function(input_df, overview_file, select_gene, select
     stat_boxplot(geom='errorbar', linetype=1, width=0.2, position = "dodge2")+
     scale_fill_manual(values= coul) +
     facet_wrap(facet_name~., scales = "free", dir = "v", ncol= 1, strip.position="right", drop = F)
-  # print(p)
   return(p)
 }
 
@@ -662,45 +660,37 @@ ProteomicTableDisplay <- function(Path=file.path(homedir, "Proteomic_3"),
                                   Fname=isolate(input$ProteomicDataset),
                                   alpha = isolate(input$ProteomicPval),
                                   lfc = isolate(input$ProteomicFC),
-                                  sigCol=isolate(input$ProteomicHypothesisTestDE)
-){
+                                  sigCol=isolate(input$ProteomicHypothesisTestDE) ){
   if(!Fname == "Select Dataset"){
     ProtLis = ProteomicsDataLoad(Path=Path, Fname=Fname, alpha=alpha, lfc=lfc, sigCol=sigCol)
     temp <- as.data.frame(rowData(ProtLis[[1]]))
     return(temp)
-  }
-}
+  } }
 
 ################################################
 #### Proteomic Multi-Study Heatmap function ####
 ################################################
-CrossDataHeatProteomic <- function(fPath, GeneSelection, Dataselection, ScaleData, plottype, FCCutoff, PCutoff, SigCol){
+CrossDataHeatProteomic <- function(DESE, GeneSelection, Dataselection, ScaleData, plottype = "Heat", FCCutoff, PCutoff, SigCol){
   if(!is.null(Dataselection)){
-    #### Load selected datasets and combine results ####
-    loadFiles <- file.path(fPath, paste(Dataselection, ".rds", sep = ""))
-    for(i in 1:length(loadFiles)){
-      tempProt <- readRDS(loadFiles[i])
-      dat <- rowData(tempProt)
-      dat <- dat[!(colnames(dat) %in% c("name", "Sample", "ProteinID", "GeneSymbol", "Description", "Numberofpeptides", "ID", "imputed", "num_NAs"))]
-      #### Update column names ####
-      colnames(dat) <- paste(gsub("-.+", "", gsub(".+/", "", loadFiles[i])),colnames(dat)[1:length(colnames(dat))], sep = ":")
-      rownames(dat) <- toupper(rownames(dat))
-      if(i == 1){ compiledDF <-dat
-      } else { compiledDF <- merge(compiledDF, dat, by = "row.names", all = TRUE)
-      row.names(compiledDF) <- compiledDF$Row.names
-      compiledDF$Row.names <- NULL  }
-    }
-    #### perform gene selection ####
-    compiledDF <- compiledDF[toupper(rownames(compiledDF)) %in% toupper(GeneSelection),]
-    if(nrow(compiledDF) > 0){
-    #### Perform analyses  ####
-    ###########################
+    #### Select Genes ####
+    SEsub <- DESE[rowData(DESE)$SYMBOL %in% GeneSelection]
+    #### select assays ####
+    assaySelect <- assays(SEsub)[names(assays(SEsub)) %in% Dataselection]
+    #### loop through remaining assays and combine results ####
+    for(i in 1:length(assaySelect)){ dat <- assaySelect[[i]]
+    colnames(dat) <- paste(colnames(dat), names(assaySelect)[i], sep = "_")
+    if(i == 1){ compiledDF <-dat
+    } else { compiledDF <- merge(compiledDF, dat, by = "row.names", all = TRUE)
+    row.names(compiledDF) <- compiledDF$Row.names
+    compiledDF$Row.names <- NULL  } }
+    #### create heatmap ####
+    ########################
     if(plottype == "Heat"){
-      selcomps <- unique(mgsub(colnames(compiledDF), c("_CI.L", "_CI.R", "_diff", "_p.adj", "_p.val", "_BHCorrection"), c("","","","","","")))
+      selcomps <- unique(mgsub(colnames(compiledDF), c("logFC_", "AdjPValue_", "Pvalue_", "BHCorrection_"), c("","","","")))
       DFsub3 <- data.table()
       for(b in 1:length(selcomps)){
         temp <- compiledDF[,grepl(selcomps[b], colnames(compiledDF))]
-        temp <- temp[,grepl(paste("diff", SigCol, sep = "|"), colnames(temp))]
+        temp <- temp[,grepl(paste("logFC", SigCol, sep = "|"), colnames(temp))]
         colnames(temp) <- c("logFC", "Significance")
         temp$SYMBOL <- rownames(temp)
         temp$Comparison <- selcomps[b]
@@ -731,13 +721,13 @@ CrossDataHeatProteomic <- function(fPath, GeneSelection, Dataselection, ScaleDat
           geom_tile(color = "white", lwd = 0.75, linetype = 1) +
           scale_fill_gradient2(low = "#075AFF",
                                high= "#FF0000") +
-          coord_fixed() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+          coord_fixed() +
+          theme(axis.text.x = element_text(angle = 90, hjust = 1))
       } else {
         setnames(mel, c("names", "variable", "value"), c("Gene", "Dataset", "log2(Fold Change)"))
         p <- ggplot(mel, aes(x = Dataset, y=Gene, fill = `log2(Fold Change)`)) +
           geom_tile(color = "white", lwd = 0.75, linetype = 1) +
           scale_fill_gradient2(low = "#075AFF",
-                               # mid = "#FFFFCC",
                                high= "#FF0000") +
           coord_fixed() +
           theme(axis.text.x = element_text(angle = 90, hjust = 1))
@@ -745,11 +735,11 @@ CrossDataHeatProteomic <- function(fPath, GeneSelection, Dataselection, ScaleDat
       return(p) }
     #### Obtain counts of selected genes and return a barplot ####
     if(plottype == "Bar"){
-      selcomps <- unique(mgsub(colnames(compiledDF), c("_CI.L", "_CI.R", "_diff", "_p.adj", "_p.val", "_BHCorrection"), c("","","","","","")))
+      selcomps <- unique(mgsub(colnames(compiledDF), c("logFC_", "AdjPValue_", "Pvalue_", "BHCorrection_"), c("","","","")))
       DFsub3 <- data.table()
       for(b in 1:length(selcomps)){
         temp <- compiledDF[,grepl(selcomps[b], colnames(compiledDF))]
-        temp <- temp[,grepl(paste("diff", SigCol, sep = "|"), colnames(temp))]
+        temp <- temp[,grepl(paste("logFC", SigCol, sep = "|"), colnames(temp))]
         colnames(temp) <- c("logFC", "Significance")
         temp$SYMBOL <- rownames(temp)
         temp$Comparison <- selcomps[b]
@@ -840,11 +830,11 @@ CrossDataHeatProteomic <- function(fPath, GeneSelection, Dataselection, ScaleDat
       }
       return(p) }
     if(plottype == "Table"){
-      selcomps <- unique(mgsub(colnames(compiledDF), c("_CI.L", "_CI.R", "_diff", "_p.adj", "_p.val", "_BHCorrection"), c("","","","","","")))
+      selcomps <- unique(mgsub(colnames(compiledDF), c("logFC_", "AdjPValue_", "Pvalue_", "BHCorrection_"), c("","","", "")))
       DFsub3 <- data.table()
       for(b in 1:length(selcomps)){
         temp <- compiledDF[,grepl(selcomps[b], colnames(compiledDF))]
-        temp <- temp[,grepl(paste("diff", SigCol, sep = "|"), colnames(temp))]
+        temp <- temp[,grepl(paste("logFC", SigCol, sep = "|"), colnames(temp))]
         colnames(temp) <- c("logFC", "Significance")
         temp$SYMBOL <- rownames(temp)
         temp$Comparison <- selcomps[b]
@@ -855,7 +845,6 @@ CrossDataHeatProteomic <- function(fPath, GeneSelection, Dataselection, ScaleDat
       CompDF <- CompDF[order(SYMBOL),]
       return(as.data.frame(CompDF))
     } }
-  }
 }
 
 ##########################################
@@ -978,7 +967,6 @@ server <- function(input, output, session) {
                                                                                                      "LPP","MSH6","NARS2","NENF","NOL7","PCK1","PCYT2","PFKFB1","PIGK","PLCB3","PMM1","POLRMT","PON3","PROS1","PSMB3","PTPN2","RAD52","RBM34","RLF","RRM1","SDHC","SELENBP1","SERPINB8","SLC12A2",
                                                                                                      "SLC4A4","SNX10","SP100","SREBF2","SUCLG1","TM7SF2","TMEM97","TNK2","TRIO","TSC22D2","TXN2","USP14","VPS41","XPA","ZBTB17","ZER1","AKAP13","DAB2","FMO1","AKR1A1","COX8A","EMP2","GSTM1","HINT1",
                                                                                                      "NDUFA2","PTPN18","ANKRD46","HMGCL","SLC37A4","CHSY1","ACOT2","ERCC5","HSPE1"))
-
   output$heatMessage <- reactive({if(input$FCMultiBar < 1){print("The fold change value you entered is less than 1. Please enter a fold change value greater than or equal to 1.")} })
 
   output$heat <- renderPlot({
@@ -1019,13 +1007,11 @@ server <- function(input, output, session) {
   ##########################################################
   updateSelectizeInput(session, 'Gene_single', choices = unique(genesAll), server = TRUE, selected = c("GAPDH"))
   select_gene = function(){return(input$Gene_single)}
-
   anyna_single = reactive({check_na(raw_df, select_gene(), input$Dataset_single)})
 
   output$text_single <- renderText({
     if(anyna_single()){"Some of the selected gene(s) not available in the selected dataset"}
-    else{"Here is the plot!"}
-  })
+    else{"Here is the plot!"} })
 
   violin_single=reactive({box_violin_plot_v2.single(raw_df, select_gene(), input$Dataset_single, input$log_single)})
 
@@ -1035,47 +1021,31 @@ server <- function(input, output, session) {
     plotOutput("contents_single", height = length(select_gene())*250 ) })
 
   output$download_single <- downloadHandler(
-    filename = function() {
-      paste("Violin_plot", input$Dataset_single, input$extension_single, sep = ".")
-    },
-    content = function(file){
-      ggsave(file, violin_single(), device = input$extension_single, width = 9, height = length(select_gene())*3)
-    }
+    filename = function() { paste("Violin_plot", input$Dataset_single, input$extension_single, sep = ".") },
+    content = function(file){ ggsave(file, violin_single(), device = input$extension_single, width = 9, height = length(select_gene())*3) }
   )
 
   ##########################################
   ### Violin plot for multiple projects ####
   ##########################################
   updateSelectizeInput(session, 'Gene_multi', choices = unique(genesAll), server = TRUE, selected = c("GAPDH"))
-
   select_dis.multi = function(){return(input$Disease_multi)}
   select_tech.multi = function(){return(input$Tech_multi)}
   select_tissue.multi = function(){return(input$Tissue_multi)}
-
   select_df.multi = function(){return(overview%>%dplyr::filter(Disease%in%select_dis.multi() & Technology%in%select_tech.multi() & Tissue%in%select_tissue.multi())%>%dplyr::select(ID)%>%unlist%>%as.vector()%>%unique())}
-
   anyna_multi = reactive({check_na(raw_df, input$Gene_multi, select_df.multi())})
-
   output$text_multi <- renderText({
     if(anyna_multi()){"The selected gene not available in some of the selected dataset(s)"}
-    else{"Here is the plot!"}
-  })
-
+    else{"Here is the plot!"} })
 
   violin_multi=reactive({box_violin_plot_v2.multi(raw_df, overview, input$Gene_multi,  select_dis.multi(), select_tech.multi(),  select_tissue.multi(), input$log_multi)})
   output$contents_multi = renderPlot(violin_multi())
 
-  output$multi_data_plot <- renderUI({
-    plotOutput("contents_multi", height = length(select_df.multi())*150 ) })
+  output$multi_data_plot <- renderUI({ plotOutput("contents_multi", height = length(select_df.multi())*150) })
 
   output$download_multi <- downloadHandler(
-    filename = function() {
-      paste("Violin_plot", input$Gene_multi, input$extension_multi, sep = ".")
-    },
-    content = function(file){
-      ggsave(file, violin_multi(), device = input$extension_multi, width = 9, height = length(select_df.multi())*3)
-    })
-
+    filename = function() { paste("Violin_plot", input$Gene_multi, input$extension_multi, sep = ".") },
+    content = function(file){ ggsave(file, violin_multi(), device = input$extension_multi, width = 9, height = length(select_df.multi())*3) })
 
   ########################
   #### Proteomics tab ####
@@ -1102,32 +1072,38 @@ server <- function(input, output, session) {
   ##################################
   #### Proteomic DE Heatmap tab ####
   ##################################
-  updateSelectizeInput(session, 'ProteomicGenesHeat', choices = Proteins, server = TRUE, selected = c("EXOC6B","AKAP12","CTNNBIP1","VCPIP1","AP1AR","CNBP","KRT5","PLP2","RPS28"))
+  updateSelectizeInput(session, 'ProteomicGenesHeat', choices = Proteins, server = TRUE, selected = c("EXOC6B","AKAP12","CTNNBIP1","VCPIP1","AP1AR","CNBP","KRT5","PLP2","RPS28", "ACTR2","ALAS1","NFKB2","PSMB9","RFC2","TCF4","TRAF6","ABLIM1","ACSM3","ADD3","ADH5","ALDH9A1","ANXA1","ANXA3","AOX1","AP1B1","AR","ARF4","ATP2C1","ATP6AP2","BAIAP2","CCDC6","CCT8","CD48",
+                                                                                                      "CHERP","COL4A1","COL6A3","CPOX","CREB1","CTBS","CYB5A","DAD1","DLGAP4","DOCK4","DST","EIF2B1","EMD","EPM2AIP1","FILIP1L","GGCX","GHR","HMG20B","HMGCR","HNRNPA2B1","IGF1","IMPA1","IQGAP1","ITGA9",
+                                                                                                      "LPP","MSH6","NARS2","NENF","NOL7","PCK1","PCYT2","PFKFB1","PIGK","PLCB3","PMM1","POLRMT","PON3","PROS1","PSMB3","PTPN2","RAD52","RBM34","RLF","RRM1","SDHC","SELENBP1","SERPINB8","SLC12A2",
+                                                                                                      "SLC4A4","SNX10","SP100","SREBF2","SUCLG1","TM7SF2","TMEM97","TNK2","TRIO","TSC22D2","TXN2","USP14","VPS41","XPA","ZBTB17","ZER1","AKAP13","DAB2","FMO1","AKR1A1","COX8A","EMP2","GSTM1","HINT1",
+                                                                                                      "NDUFA2","PTPN18","ANKRD46","HMGCL","SLC37A4","CHSY1","ACOT2","ERCC5","HSPE1"))
 
   output$Proteomicheat <- renderPlot({
     req(input$ProteomicHeatsubmit)
-    CrossDataHeatProteomic(fPath = file.path(homedir, "Proteomic_3"),
-                           GeneSelection = isolate(input$ProteomicGenesHeat),
-                           Dataselection = isolate(input$ProteomicDEdatasetHeat),
-                           ScaleData = isolate(input$ProteomicScaleData),
+    CrossDataHeatProteomic(DESE = DEProtSE,
+                           GeneSelection = input$ProteomicGenesHeat,
+                           Dataselection = input$ProteomicDEdatasetHeat,
+                           ScaleData = input$ProteomicScaleData,
                            plottype = "Heat",
                            FCCutoff = isolate(input$ProteomicFCMultiBar),
                            PCutoff = isolate(input$ProteomicPvalMultiBar),
-                           SigCol = isolate(input$ProteomicHypothesisTest))  },  height = 1000, width=1300)
+                           SigCol = isolate(input$ProteomicHypothesisTest)
+    )  },  height = 1000, width=1300)
 
   output$ProteomicheatBar <- renderPlot({
     req(input$ProteomicHeatsubmit)
-    CrossDataHeatProteomic(fPath = file.path(homedir, "Proteomic_3"),
-                           GeneSelection = isolate(input$ProteomicGenesHeat),
-                           Dataselection = isolate(input$ProteomicDEdatasetHeat),
-                           ScaleData = isolate(input$ProteomicScaleData),
+    CrossDataHeatProteomic(DESE = DEProtSE,
+                           GeneSelection = input$ProteomicGenesHeat,
+                           Dataselection = input$ProteomicDEdatasetHeat,
+                           ScaleData = input$ProteomicScaleData,
                            plottype = "Bar",
                            FCCutoff = isolate(input$ProteomicFCMultiBar),
                            PCutoff = isolate(input$ProteomicPvalMultiBar),
-                           SigCol = isolate(input$ProteomicHypothesisTest))  },  height = 1000, width=1300)
+                           SigCol = isolate(input$ProteomicHypothesisTest)
+    )  },  height = 1000, width=1300)
 
   output$ProteomicheatText <- DT::renderDT(
-    CrossDataHeatProteomic(fPath = file.path(homedir, "Proteomic_3"),
+    CrossDataHeatProteomic(DESE = DEProtSE,
                            GeneSelection = input$ProteomicGenesHeat,
                            Dataselection = input$ProteomicDEdatasetHeat,
                            ScaleData = input$ProteomicScaleData,
@@ -1172,7 +1148,6 @@ server <- function(input, output, session) {
   output$MethylationDETable <- DT::renderDT({
     methylationDTload(dataset= input$MethylationDataset)
   })
-
 }
 
 

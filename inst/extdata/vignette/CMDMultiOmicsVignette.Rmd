@@ -2,7 +2,6 @@
 title: "CMDMultiOmics: a multi-omits atlas to investigate the complexity and spectrum
   of human cardiometabolic related disease"
 author: "Brendan Gongol, Xueyuan Jiang, Xiaowen Chen, Yang Liu"
-# date: "2024-02-09"
 output: 
   BiocStyle::html_document:
     toc_float: true

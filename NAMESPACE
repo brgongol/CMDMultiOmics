@@ -3,6 +3,7 @@
 export(AppSetup)
 export(DEAnalysis)
 export(DESEGenerate)
+export(DESEProtGenerate)
 export(DataFilter)
 export(DataImpute)
 export(DesignMatrixFromNames)

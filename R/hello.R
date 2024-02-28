@@ -1063,6 +1063,158 @@ DESEGenerate <- function(DEGDatapath, SEPath){
   saveRDS(SE, file=SEPath)
   return(SE) }
 
+#' Create a summarized experiment object that integrates all Proteomic DEG data.
+#'
+#' @param ProtDatapath The path to the directory where the fold change data are stored.
+#' @param SEPath The path to the directory where the compiled SummarizedExperiment object should be stored.
+#' @import data.table
+#' @import org.Mm.eg.db
+#' @import org.Hs.eg.db
+#' @import SummarizedExperiment
+#' @import AnnotationDbi
+#' @importFrom S4Vectors SimpleList
+#' @export
+DESEProtGenerate <- function(ProtDatapath, SEPath){
+  #### Check if SE object exists ####
+  tryCatch({ SE1 <- readRDS(SEPath)
+  }, warning = function(w) {Scratch <<- TRUE; print("SE file not found. Compiling from scratch")})
+  if(exists("SE1")){SE <- SE1; Scratch <- FALSE; print("Updating SE object") }
+  #### obtain fold change file names ####
+  files <- list.files(ProtDatapath)
+  files <- files[grepl(".rds", files)]
+  if(Scratch){
+    #### map Human annotation information to gene names ####
+    x<-org.Hs.egSYMBOL; symbols<-mappedkeys(x)
+    goHuman <- as.data.table( suppressMessages(AnnotationDbi::select(org.Hs.eg.db, symbols, c("SYMBOL"), "ENTREZID" ) ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Human", sep = ""))) # , "ENSEMBL"
+    goHuman <- goHuman[!is.na(goHuman$SYMBOL),]
+    #### map Mouse annotation information to gene names ####
+    x<-org.Mm.egSYMBOL; symbols<-mappedkeys(x)
+    goMouse <- as.data.table( suppressMessages(AnnotationDbi::select(org.Mm.eg.db, symbols, c("SYMBOL") , "ENTREZID") ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Mouse", sep = ""))) #, "ENSEMBL"
+    goMouse <- goMouse[!is.na(goMouse$SYMBOL),]
+    # #### map Rat annotation information to gene names ####
+    # x<-org.Rn.egSYMBOL; symbols<-mappedkeys(x)
+    # goRat <- as.data.table( select(org.Rn.eg.db, symbols, c("SYMBOL"), "ENTREZID") ) %>% setnames(c("ENTREZID"), paste(c("ENTREZID"), "_Rat", sep = "")))
+    # goRat <- goRat[!is.na(goRat$ENTREZID),]
+    #### set up rowData information ####
+    ####################################
+    print("formatting rowData information.")
+    goMouse$SYMBOL <- toupper(goMouse$SYMBOL)
+    goHuman$SYMBOL <- toupper(goHuman$SYMBOL)
+    mer <- merge(goHuman, goMouse, by = "SYMBOL", all = TRUE)
+    mer <- mer[!grepl("RIK$", mer$SYMBOL),]
+    mer <- mer[!grepl("RIK[0-9]$", mer$SYMBOL),]
+    mer <- mer[!grepl("---", mer$SYMBOL),]
+    mer <- mer[!grepl("1-DEC", mer$SYMBOL),]
+    mer <- mer[!grepl("1-MAR", mer$SYMBOL),]
+    #### remove duplicated records ####
+    dups <- unique(mer[duplicated(mer$SYMBOL),]$SYMBOL)
+    dupRMDT <- data.table()
+    for(i in 1:length(dups)){
+      temp <- mer[mer$SYMBOL == dups[i],]
+      if(nrow(temp[complete.cases(temp)]) == 0){
+        df <- as.data.frame(is.na(as.matrix(temp[,2:3, with = FALSE])))
+        FAL <- apply(df, 1, sum)
+        if(sum(FAL == 2) == 4){ temp <- temp[1,]
+        } else { temp <- unique(temp[FAL ==1,]) }
+        dupRMDT <- rbind(dupRMDT, temp)
+      } else { dupRMDT <- rbind(dupRMDT, temp[complete.cases(temp),]) } }
+    dupRMDT
+    #### Combine duplicated records with non-duplicated records ####
+    dupRMDT <- dupRMDT[!duplicated(dupRMDT$SYMBOL),]
+    mer2 <- mer[!(mer$SYMBOL %in% dupRMDT$SYMBOL),]
+    mer2 <- rbind(mer2, dupRMDT)
+    #### format SummarizedExperiment rowData data frame ####
+    rowData <- as.data.frame(mer2)
+    row.names(rowData) <- rowData$SYMBOL
+    rowData <- rowData[order(rownames(rowData), decreasing = FALSE),]
+    print("Compiling list of FC data.")
+    checkIdent <- NULL
+    SEList <- list()
+    Names <- NULL
+    for(i in 1:length(files)){
+      #### load and format file ####
+      temp <- readRDS(file.path(ProtDatapath, files[i]))
+      temp <- as.data.table(rowData(temp))
+      temp <- temp[,grepl("diff|p.adj|p.val|BHCorrection|GeneSymbol", colnames(temp)), with = FALSE]
+      setnames(temp, colnames(temp), c("SYMBOL", "logFC", "AdjPValue", "Pvalue", "BHCorrection") )
+      temp <- temp[!temp$SYMBOL == "",]
+      temp$SYMBOL <- toupper(temp$SYMBOL)
+      #### unduplicate gene names ####
+      for(b in 1:nrow(temp)){
+        t1 <- temp[b,]
+        dt <- data.table(SYMBOL=str_split(t1$SYMBOL, ";")[[1]], logFC=t1$logFC, AdjPValue=t1$AdjPValue, Pvalue=t1$Pvalue, BHCorrection=t1$BHCorrection)
+        if(b == 1){ temp2 <- dt
+        } else { temp2 <- rbind(temp2, dt) } }
+      # temp <- temp2
+      temp2 <- temp2[toupper(temp2$SYMBOL) %in% mer2$SYMBOL,]
+      colnames(temp2) <- gsub(".+_", "", colnames(temp2))
+      #### if there are gene duplications, keep the more significant of the two ####
+      temp2 <- temp2[,.SD[which.min(Pvalue)], by = "SYMBOL"]
+      #### normalize row lengths across all names ####
+      tempMer <- merge(mer2, temp2, by = "SYMBOL", all.x = TRUE)
+      tempMer <- tempMer[,c("SYMBOL", "logFC", "AdjPValue", "Pvalue", "BHCorrection"), with = FALSE]
+      #### format data frame ####
+      tempMer <- as.data.frame(tempMer)
+      rownames(tempMer) <- tempMer$SYMBOL
+      tempMer$SYMBOL <- NULL
+      tempMer <- tempMer[order(rownames(tempMer), decreasing = FALSE),]
+      #### Save to list ####
+      SEList[[i]] <- tempMer
+      names(SEList)[i] <- gsub(".rds", "", files[i])
+      print(paste("completed", i, "of", length(files))) }
+    #### Create SummarizedExperiment object ####
+    SE <- SummarizedExperiment(assays = SimpleList(SEList), rowData = rowData)
+  } else {
+    #### Check for duplicated names ####
+    dups <- files[gsub(".rds", "", files) %in% names(assays(SE))]
+    if(length(dups) > 0){
+      print(paste("Ignoring", dups, "which alerady exist in the database."))
+      files <- files[!(files %in% dups)] }
+    if(length(files) > 0){
+      rowData = as.data.table(rowData(SE))
+      print("Compiling list of FC data.")
+      SEList <- list()
+      Names <- NULL
+      for(i in 1:length(files)){
+        #### load and format file ####
+        temp <- readRDS(file.path(ProtDatapath, files[i]))
+        temp <- as.data.table(rowData(temp))
+        temp <- temp[,grepl("diff|p.adj|p.val|BHCorrection|GeneSymbol", colnames(temp)), with = FALSE]
+        setnames(temp, colnames(temp), c("SYMBOL", "logFC", "AdjPValue", "Pvalue", "BHCorrection") )
+        temp <- temp[!temp$SYMBOL == "",]
+        temp$SYMBOL <- toupper(temp$SYMBOL)
+        #### unduplicate gene names ####
+        for(b in 1:nrow(temp)){
+          t1 <- temp[b,]
+          dt <- data.table(SYMBOL=str_split(t1$SYMBOL, ";")[[1]], logFC=t1$logFC, AdjPValue=t1$AdjPValue, Pvalue=t1$Pvalue, BHCorrection=t1$BHCorrection)
+          if(b == 1){ temp2 <- dt
+          } else { temp2 <- rbind(temp2, dt) } }
+        # temp <- temp2
+        temp2 <- temp2[toupper(temp2$SYMBOL) %in% mer2$SYMBOL,]
+        colnames(temp2) <- gsub(".+_", "", colnames(temp2))
+        #### if there are gene duplications, keep the more significant of the two ####
+        temp2 <- temp2[,.SD[which.min(Pvalue)], by = "SYMBOL"]
+        #### normalize row lengths across all names ####
+        tempMer <- merge(rowData, temp2, by = "SYMBOL", all.x = TRUE)
+        tempMer <- tempMer[,c("SYMBOL", "logFC", "Pvalue", "AdjPValue"), with = FALSE]
+        #### format data frame ####
+        tempMer <- as.data.frame(tempMer)
+        rownames(tempMer) <- tempMer$SYMBOL
+        tempMer$SYMBOL <- NULL
+        tempMer <- tempMer[order(rownames(tempMer), decreasing = FALSE),]
+        #### Save to list ####
+        SEList[[i]] <- tempMer
+        names(SEList)[i] <- gsub(".rds", "", files[i])
+        print(paste("completed", i, "of", length(files))) }
+      #### Create SummarizedExperiment object ####
+      SEList1 <- list()
+      SEass <- assays(SE)
+      for(b in 1:length(SEass)){ SEList1[[b]] <- SEass[[b]];
+      names(SEList1)[b] <- names(SEass)[b] }
+      SE <- SummarizedExperiment(assays = SimpleList(c(SEList1, SEList)), rowData = rowData) } }
+  saveRDS(SE, file=SEPath)
+  return(SE) }
+
 #' Set up app files
 #'
 #' @param homedir the path to the database location.
